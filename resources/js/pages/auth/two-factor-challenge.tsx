@@ -1,4 +1,4 @@
-import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { Form, Head } from '@inertiajs/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { useMemo, useState } from 'react';
 import InputError from '@/components/input-error';
@@ -10,6 +10,7 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth';
+import AuthLayout from '@/layouts/auth-layout';
 import { store } from '@/routes/two-factor/login';
 
 export default function TwoFactorChallenge() {
@@ -17,31 +18,18 @@ export default function TwoFactorChallenge() {
     const [code, setCode] = useState<string>('');
 
     const authConfigContent = useMemo<{
-        title: string;
-        description: string;
         toggleText: string;
     }>(() => {
         if (showRecoveryInput) {
             return {
-                title: 'Recovery code',
-                description:
-                    'Please confirm access to your account by entering one of your emergency recovery codes.',
                 toggleText: 'login using an authentication code',
             };
         }
 
         return {
-            title: 'Authentication code',
-            description:
-                'Enter the authentication code provided by your authenticator application.',
             toggleText: 'login using a recovery code',
         };
     }, [showRecoveryInput]);
-
-    setLayoutProps({
-        title: authConfigContent.title,
-        description: authConfigContent.description,
-    });
 
     const toggleRecoveryMode = (clearErrors: () => void): void => {
         setShowRecoveryInput(!showRecoveryInput);
@@ -50,8 +38,11 @@ export default function TwoFactorChallenge() {
     };
 
     return (
-        <>
-            <Head title="Two-factor authentication" />
+        <AuthLayout
+            titulo="Autenticação em dois fatores"
+            subtitulo="Informe o código do seu aplicativo autenticador"
+        >
+            <Head title="Autenticação em dois fatores" />
 
             <div className="space-y-6">
                 <Form
@@ -127,6 +118,6 @@ export default function TwoFactorChallenge() {
                     )}
                 </Form>
             </div>
-        </>
+        </AuthLayout>
     );
 }

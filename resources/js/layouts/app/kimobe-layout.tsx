@@ -1,5 +1,6 @@
 import { Toaster } from 'sonner';
 import { BannerCobrancaKimobe } from '@/components/banner-cobranca-kimobe';
+import { CreditosKicol } from '@/components/creditos-kicol';
 import { KimobeContextBar } from '@/components/kimobe-context-bar';
 import { KimobeNavbar } from '@/components/kimobe-navbar';
 
@@ -16,6 +17,7 @@ export default function KimobeLayout({ children }: Props) {
             <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 md:px-6">
                 {children}
             </main>
+            <CreditosKicol className="pt-10 pb-4" theme="light" />
             <Toaster
                 position="top-right"
                 richColors

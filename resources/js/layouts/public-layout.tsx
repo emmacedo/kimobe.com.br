@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { CreditosKicol } from '@/components/creditos-kicol';
 import { cn } from '@/lib/utils';
 
 type Props = { children: React.ReactNode };
@@ -117,6 +118,7 @@ export default function PublicLayout({ children }: Props) {
                     <div className="mt-10 border-t border-white/10 pt-6 text-center text-xs text-[#8DCAD6]">
                         © {new Date().getFullYear()} Kimobe. Todos os direitos reservados.
                     </div>
+                    <CreditosKicol theme="dark" className="mt-4 py-2" />
                 </div>
             </footer>
         </div>
