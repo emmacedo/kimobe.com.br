@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Plano;
+use App\Models\User;
+use App\Services\RegistroService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class RegistroController extends Controller
+{
+    public function __construct(
+        protected RegistroService $registroService,
+    ) {}
+
+    public function index(Request $request): Response|RedirectResponse
+    {
+        if (auth()->check()) {
+            return redirect()->route('dashboard');
+        }
+
+        $planos = Plano::ativo()->ordenado()->get();
+        $planoSelecionado = $request->input('plano');
+
+        return Inertia::render('public/registro', [
+            'planos' => $planos,
+            'plano_selecionado' => $planoSelecionado ? (int) $planoSelecionado : null,
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'plano_id' => ['required', 'exists:planos,id'],
+            'nome' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'telefone' => ['nullable', 'string', 'max:20'],
+            'cpf' => ['required', 'string', 'max:14'],
+            'senha' => ['required', 'string', 'min:8', 'confirmed'],
+            'tipo_tenant' => ['required', 'in:imobiliaria,proprietario_direto'],
+            'nome_tenant' => ['required', 'string', 'max:255'],
+            'cnpj' => ['nullable', 'required_if:tipo_tenant,imobiliaria', 'string', 'max:18'],
+            'termos' => ['required', 'accepted'],
+        ], [
+            'email.unique' => 'Este email já está cadastrado.',
+            'senha.min' => 'A senha deve ter pelo menos 8 caracteres.',
+            'senha.confirmed' => 'A confirmação de senha não confere.',
+            'nome.required' => 'Informe seu nome completo.',
+            'cpf.required' => 'Informe seu CPF.',
+            'nome_tenant.required' => 'Informe o nome da empresa.',
+            'cnpj.required_if' => 'Informe o CNPJ da imobiliária.',
+            'termos.accepted' => 'Você precisa aceitar os termos de uso.',
+        ]);
+
+        // Verificar unicidade do documento do tenant
+        if ($request->tipo_tenant === 'imobiliaria') {
+            $docExists = \App\Models\Tenant::withoutGlobalScopes()->where('documento', $request->cnpj)->exists();
+            if ($docExists) {
+                return back()->withErrors(['cnpj' => 'Este CNPJ já está cadastrado.']);
+            }
+        } else {
+            $docExists = \App\Models\Tenant::withoutGlobalScopes()->where('documento', $request->cpf)->exists();
+            if ($docExists) {
+                return back()->withErrors(['cpf' => 'Este CPF já está cadastrado como assinante.']);
+            }
+        }
+
+        $this->registroService->registrar($request->all());
+
+        return redirect()->route('dashboard')
+            ->with('success', 'Bem-vindo ao Kimobe! Sua conta foi criada com sucesso.');
+    }
+
+    public function verificarEmail(Request $request): JsonResponse
+    {
+        $request->validate(['email' => ['required', 'email']]);
+        $disponivel = ! User::where('email', $request->email)->exists();
+
+        return response()->json(['disponivel' => $disponivel]);
+    }
+}

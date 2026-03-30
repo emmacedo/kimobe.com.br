@@ -1,0 +1,102 @@
+
+<style>
+*{box-sizing:border-box;margin:0}
+.wrap{font-family:var(--font-sans);color:var(--color-text-primary);padding:8px 0}
+.label{font-size:12px;color:var(--color-text-tertiary);margin-bottom:8px}
+.preview{border-radius:12px;overflow:hidden;border:1px solid var(--color-border-tertiary)}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:#0A4F5C}
+.nav-links{display:flex;gap:16px;font-size:12px}
+.table-tabs{display:flex;gap:0}
+.body{background:#EEF0EF;padding:16px 20px}
+.cards{display:flex;gap:10px;margin-bottom:14px}
+.card{flex:1;border-radius:10px;padding:14px;background:#fff;border:1px solid #D8DCDA}
+.card-title{font-size:10px;color:#6B7370;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px}
+.card-val{font-size:20px;font-weight:500;color:#1E2D30;margin-bottom:2px}
+.card-sub{font-size:10px}
+.card-bar{height:3px;border-radius:2px;margin-top:8px}
+.table-wrap{background:#fff;border-radius:10px;border:1px solid #D8DCDA;overflow:hidden}
+.table-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #EEF0EF}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{text-align:left;font-weight:500;color:#8A918E;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:8px 14px;background:#F7F8F7}
+.tbl td{padding:10px 14px;border-bottom:1px solid #F7F8F7;color:#3A4240}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:500}
+.badge-ok{background:#E7F7ED;color:#1B6B3A}
+.badge-warn{background:#FFF4E5;color:#8C5A10}
+.badge-err{background:#FDECEC;color:#A83232}
+.badge-gold{background:#FBF6E8;color:#6B5420}
+.amt{font-family:var(--font-mono);font-weight:500}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle}
+</style>
+<div class="wrap">
+<div class="label">Preview — Dashboard Kimobe (contraste corrigido v3)</div>
+<div class="preview">
+  <div class="nav">
+    <div style="font-size:16px;font-weight:500;letter-spacing:-.3px;color:#E4CC82">kimobe</div>
+    <div class="nav-links">
+      <span style="color:#ffffff;font-weight:500">Dashboard</span>
+      <span style="color:#8DCAD6">Imóveis</span>
+      <span style="color:#8DCAD6">Contratos</span>
+      <span style="color:#8DCAD6">Financeiro</span>
+      <span style="color:#8DCAD6">Inquilinos</span>
+    </div>
+    <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#ffffff">MR</div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#073B45;font-size:12px">
+    <span style="color:#B3DDE5"><span style="color:#ffffff;font-weight:500">3 cobranças pendentes</span> e <span style="color:#ffffff;font-weight:500">1 contrato</span> para renovar esta semana</span>
+    <span style="padding:5px 14px;border-radius:6px;font-size:11px;font-weight:500;background:#C9A84C;color:#ffffff;display:inline-block">Ver pendências</span>
+  </div>
+
+  <div class="body">
+    <div style="font-size:16px;font-weight:500;color:#1E2D30;margin-bottom:14px">Bom dia, Marcelo</div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-title">Receita mensal</div>
+        <div class="card-val" style="color:#0A4F5C">R$ 48.750</div>
+        <div class="card-sub" style="color:#1B6B3A"><span class="dot" style="background:#1B6B3A"></span>+12% vs anterior</div>
+        <div class="card-bar" style="background:linear-gradient(90deg,#0A4F5C 78%,#D8DCDA 78%)"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Taxa de ocupação</div>
+        <div class="card-val">94,7%</div>
+        <div class="card-sub" style="color:#0A4F5C"><span class="dot" style="background:#0A4F5C"></span>127 de 134 imóveis</div>
+        <div class="card-bar" style="background:linear-gradient(90deg,#C9A84C 94%,#D8DCDA 94%)"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Inadimplência</div>
+        <div class="card-val" style="color:#A83232">3,2%</div>
+        <div class="card-sub" style="color:#8C5A10"><span class="dot" style="background:#8C5A10"></span>2 contratos atrasados</div>
+        <div class="card-bar" style="background:linear-gradient(90deg,#A83232 3.2%,#D8DCDA 3.2%)"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Contratos ativos</div>
+        <div class="card-val">119</div>
+        <div class="card-sub" style="color:#6B7370"><span class="dot" style="background:#6B7370"></span>8 vencem em 30 dias</div>
+        <div class="card-bar" style="background:linear-gradient(90deg,#1B6B3A 89%,#D8DCDA 89%)"></div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-head">
+        <span style="font-size:13px;font-weight:500;color:#1E2D30">Últimas movimentações</span>
+        <div class="table-tabs">
+          <span style="font-size:11px;padding:4px 10px;color:#0A4F5C;font-weight:500;background:#E8F4F6;border-radius:6px">Todas</span>
+          <span style="font-size:11px;padding:4px 10px;color:#6B7370">Pendentes</span>
+          <span style="font-size:11px;padding:4px 10px;color:#6B7370">Atrasadas</span>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>Imóvel</th><th>Inquilino</th><th>Valor</th><th>Status</th><th>Vencimento</th></tr></thead>
+        <tbody>
+          <tr><td>Apt 302 — Ed. Aurora</td><td>Ana Costa</td><td class="amt">R$ 2.400</td><td><span class="badge badge-ok">Pago</span></td><td>05/03</td></tr>
+          <tr><td>Casa 14 — Cond. Verde</td><td>Pedro Lima</td><td class="amt">R$ 3.800</td><td><span class="badge badge-warn">Pendente</span></td><td>10/03</td></tr>
+          <tr><td>Sala 507 — Comm Tower</td><td>Studio MK</td><td class="amt">R$ 5.200</td><td><span class="badge badge-ok">Pago</span></td><td>01/03</td></tr>
+          <tr><td>Apt 108 — Ed. Sol</td><td>Rita Mendes</td><td class="amt">R$ 1.900</td><td><span class="badge badge-err">Atrasado</span></td><td>28/02</td></tr>
+          <tr><td>Loja 3 — Galeria Central</td><td>Café Aroma</td><td class="amt">R$ 4.100</td><td><span class="badge badge-gold">Renovação</span></td><td>15/03</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
