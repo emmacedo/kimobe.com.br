@@ -9,7 +9,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { formataMoeda } from '@/lib/utils';
 
 type PlanoData = { id: number; nome: string; descricao: string | null; limite_imoveis: number; valor_mensal: string };
 type Props = { planos: PlanoData[]; plano_selecionado: number | null };
@@ -92,13 +91,26 @@ export default function RegistroPage({ planos, plano_selecionado }: Props) {
                             <h2 className="mb-6 text-center text-xl font-medium text-[#1E2D30]">Escolha seu plano</h2>
                             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                                 {planos.map((p, i) => (
-                                    <div key={p.id} onClick={() => setPlanoId(p.id)} className={`cursor-pointer rounded-xl border-2 transition-all ${planoId === p.id ? 'border-[#C9A84C] shadow-lg' : 'border-[#D8DCDA] hover:border-[#8A918E]'}`}>
-                                        <PlanoCard plano={p} destaque={i === 1} />
-                                    </div>
+                                    <PlanoCard
+                                        key={p.id}
+                                        plano={p}
+                                        destaque={i === 1}
+                                        selecionavel
+                                        selecionado={planoId === p.id}
+                                        onSelect={() => setPlanoId(p.id)}
+                                    />
                                 ))}
                             </div>
                             <div className="mt-8 text-center">
-                                <Button disabled={!planoId} onClick={() => setStep(1)} className="bg-[#C9A84C] px-8 text-[#2E2410] hover:bg-[#B8993F]">Próximo</Button>
+                                <Button
+                                    disabled={!planoId}
+                                    onClick={() => setStep(1)}
+                                    className={planoId
+                                        ? 'bg-[#0A4F5C] px-8 text-white hover:bg-[#073B45]'
+                                        : 'bg-[#D8DCDA] px-8 text-[#8A918E] cursor-not-allowed'}
+                                >
+                                    Próximo
+                                </Button>
                             </div>
                         </div>
                     )}
@@ -173,7 +185,11 @@ export default function RegistroPage({ planos, plano_selecionado }: Props) {
                                 <div className="rounded-xl border border-[#D8DCDA] bg-white p-6 lg:col-span-2">
                                     <p className="mb-4 text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Resumo do pedido</p>
                                     <p className="text-lg font-medium text-[#1E2D30]">{planoAtual.nome}</p>
-                                    <p className="mt-1 font-mono text-2xl font-bold text-[#0A4F5C]">{formataMoeda(planoAtual.valor_mensal)}<span className="text-sm text-[#8A918E]">/mês</span></p>
+                                    <div className="mt-1 flex items-baseline gap-1">
+                                        <span className="text-sm font-normal text-[#6B7370]">R$</span>
+                                        <span className="text-2xl font-semibold tracking-tight text-[#0A4F5C]">{parseFloat(planoAtual.valor_mensal).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <span className="text-sm font-normal text-[#8A918E]">/mês</span>
+                                    </div>
                                     <p className="mt-2 text-sm text-[#6B7370]">{planoAtual.limite_imoveis === 0 ? 'Imóveis ilimitados' : `Até ${planoAtual.limite_imoveis} imóveis`}</p>
                                     <div className="mt-4 border-t border-[#EEF0EF] pt-4 text-xs text-[#8A918E]">
                                         <p>Sua primeira fatura será gerada automaticamente.</p>
