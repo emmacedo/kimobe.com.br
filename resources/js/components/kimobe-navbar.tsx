@@ -131,7 +131,7 @@ export function KimobeNavbar() {
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>
-                                <Link href="/settings/profile">Perfil</Link>
+                                <Link href="/settings/perfil">Perfil</Link>
                             </DropdownMenuItem>
                             {has_multiple_tenants && (
                                 <DropdownMenuItem onClick={handleTrocarContexto}>

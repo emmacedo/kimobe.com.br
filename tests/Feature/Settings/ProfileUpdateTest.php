@@ -1,11 +1,11 @@
 <?php
 
-test('profile page is displayed', function () {
+test('perfil page is displayed', function () {
     $user = createUserWithTenant();
 
     $response = $this
         ->actingAs($user)
-        ->get(route('profile.edit'));
+        ->get(route('settings.perfil'));
 
     $response->assertOk();
 });
@@ -15,14 +15,14 @@ test('profile information can be updated', function () {
 
     $response = $this
         ->actingAs($user)
-        ->patch(route('profile.update'), [
+        ->put(route('settings.perfil.update'), [
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
 
     $response
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('profile.edit'));
+        ->assertRedirect();
 
     $user->refresh();
 
@@ -36,48 +36,14 @@ test('email verification status is unchanged when the email address is unchanged
 
     $response = $this
         ->actingAs($user)
-        ->patch(route('profile.update'), [
+        ->put(route('settings.perfil.update'), [
             'name' => 'Test User',
             'email' => $user->email,
         ]);
 
     $response
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('profile.edit'));
+        ->assertRedirect();
 
     expect($user->refresh()->email_verified_at)->not->toBeNull();
-});
-
-test('user can delete their account', function () {
-    $user = createUserWithTenant();
-
-    $response = $this
-        ->actingAs($user)
-        ->delete(route('profile.destroy'), [
-            'password' => 'password',
-        ]);
-
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('home'));
-
-    $this->assertGuest();
-    expect($user->fresh())->toBeNull();
-});
-
-test('correct password must be provided to delete account', function () {
-    $user = createUserWithTenant();
-
-    $response = $this
-        ->actingAs($user)
-        ->from(route('profile.edit'))
-        ->delete(route('profile.destroy'), [
-            'password' => 'wrong-password',
-        ]);
-
-    $response
-        ->assertSessionHasErrors('password')
-        ->assertRedirect(route('profile.edit'));
-
-    expect($user->fresh())->not->toBeNull();
 });

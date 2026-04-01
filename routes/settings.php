@@ -1,24 +1,34 @@
 <?php
 
-use App\Http\Controllers\Settings\ProfileController;
-use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\SettingsPlanoController;
+use App\Http\Controllers\Settings\SettingsProfileController;
+use App\Http\Controllers\Settings\SettingsSegurancaController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'tenant'])->group(function () {
-    Route::redirect('settings', '/settings/profile');
+Route::middleware(['auth', 'verified', 'tenant'])->prefix('settings')->group(function () {
+    Route::redirect('/', '/settings/perfil');
 
-    Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
-});
+    // Perfil — todos os papéis
+    Route::get('perfil', [SettingsProfileController::class, 'perfil'])->name('settings.perfil');
+    Route::put('perfil', [SettingsProfileController::class, 'atualizarPerfil'])->name('settings.perfil.update');
 
-Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
-    Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Empresa — apenas admin
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('empresa', [SettingsProfileController::class, 'empresa'])->name('settings.empresa');
+        Route::put('empresa', [SettingsProfileController::class, 'atualizarEmpresa'])->name('settings.empresa.update');
+        Route::put('empresa/endereco', [SettingsProfileController::class, 'atualizarEnderecoEmpresa'])->name('settings.empresa.endereco.update');
+        Route::put('empresa/contato', [SettingsProfileController::class, 'atualizarContatoEmpresa'])->name('settings.empresa.contato.update');
+    });
 
-    Route::get('settings/security', [SecurityController::class, 'edit'])->name('security.edit');
+    // Plano — apenas admin
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('plano', [SettingsPlanoController::class, 'index'])->name('settings.plano');
+        Route::post('plano', [SettingsPlanoController::class, 'alterarPlano'])->name('settings.plano.update');
+    });
 
-    Route::put('settings/password', [SecurityController::class, 'update'])
+    // Segurança — todos os papéis
+    Route::get('seguranca', [SettingsSegurancaController::class, 'index'])->name('settings.seguranca');
+    Route::put('seguranca/senha', [SettingsSegurancaController::class, 'alterarSenha'])
         ->middleware('throttle:6,1')
-        ->name('user-password.update');
-
-    Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
+        ->name('settings.seguranca.senha');
 });

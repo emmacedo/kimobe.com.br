@@ -11,7 +11,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['nome', 'tipo', 'documento', 'plano', 'status', 'plano_id', 'cortesia', 'motivo_cortesia', 'bloqueado_em', 'motivo_bloqueio'])]
+#[Fillable([
+    'nome', 'tipo', 'documento', 'plano', 'status', 'plano_id',
+    'cortesia', 'motivo_cortesia', 'bloqueado_em', 'motivo_bloqueio',
+    'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf',
+    'email_contato', 'telefone_comercial', 'whatsapp', 'site',
+])]
 class Tenant extends Model
 {
     /** @use HasFactory<TenantFactory> */
