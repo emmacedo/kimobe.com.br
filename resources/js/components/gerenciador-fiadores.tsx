@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FiadorDetalhesDialog } from '@/components/fiador-detalhes-dialog';
 import { InputCep } from '@/components/input-cep';
+import { InputCpf } from '@/components/input-cpf';
 import InputError from '@/components/input-error';
 import { InputTelefone } from '@/components/input-telefone';
 import { SelectUf } from '@/components/select-uf';
@@ -49,13 +50,6 @@ const formInicial: FiadorForm = {
     cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '',
 };
 
-function mascaraCpf(v: string): string {
-    const d = v.replace(/\D/g, '').slice(0, 11);
-    if (d.length <= 3) return d;
-    if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-    if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-}
 
 export function GerenciadorFiadores({ contratoId, fiadores: fiadoresIniciais, tipoGarantia }: Props) {
     const [fiadores, setFiadores] = useState<Fiador[]>(fiadoresIniciais);
@@ -240,7 +234,7 @@ export function GerenciadorFiadores({ contratoId, fiadores: fiadoresIniciais, ti
                             </div>
                             <div>
                                 <Label>CPF</Label>
-                                <Input value={form.cpf} onChange={(e) => setField('cpf', mascaraCpf(e.target.value))} placeholder="000.000.000-00" maxLength={14} className="bg-white border-[#D8DCDA]" />
+                                <InputCpf value={form.cpf} onChange={(v) => setField('cpf', v)} />
                             </div>
                             <div>
                                 <Label>RG <span className="text-[#8A918E]">(opcional)</span></Label>

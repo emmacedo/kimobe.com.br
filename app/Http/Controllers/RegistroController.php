@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Plano;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\RegistroService;
+use App\Support\Sanitize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,6 +36,13 @@ class RegistroController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Sanitiza campos com máscara antes de validar
+        $request->merge(array_filter([
+            'telefone' => $request->telefone ? Sanitize::telefone($request->telefone) : null,
+            'cpf' => $request->cpf ? Sanitize::cpf($request->cpf) : null,
+            'cnpj' => $request->cnpj ? Sanitize::cnpj($request->cnpj) : null,
+        ], fn ($v) => $v !== null));
+
         $request->validate([
             'plano_id' => ['required', 'exists:planos,id'],
             'nome' => ['required', 'string', 'max:255'],
@@ -58,12 +67,12 @@ class RegistroController extends Controller
 
         // Verificar unicidade do documento do tenant
         if ($request->tipo_tenant === 'imobiliaria') {
-            $docExists = \App\Models\Tenant::withoutGlobalScopes()->where('documento', $request->cnpj)->exists();
+            $docExists = Tenant::withoutGlobalScopes()->where('documento', $request->cnpj)->exists();
             if ($docExists) {
                 return back()->withErrors(['cnpj' => 'Este CNPJ já está cadastrado.']);
             }
         } else {
-            $docExists = \App\Models\Tenant::withoutGlobalScopes()->where('documento', $request->cpf)->exists();
+            $docExists = Tenant::withoutGlobalScopes()->where('documento', $request->cpf)->exists();
             if ($docExists) {
                 return back()->withErrors(['cpf' => 'Este CPF já está cadastrado como assinante.']);
             }

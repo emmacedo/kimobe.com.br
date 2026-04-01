@@ -2,6 +2,8 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { InputCnpj } from '@/components/input-cnpj';
+import { InputCpf } from '@/components/input-cpf';
 import InputError from '@/components/input-error';
 import { InputTelefone } from '@/components/input-telefone';
 import { PlanoCard } from '@/components/public/plano-card';
@@ -15,9 +17,6 @@ type PlanoData = { id: number; nome: string; descricao: string | null; limite_im
 type Props = { planos: PlanoData[]; plano_selecionado: number | null };
 
 function getCsrfToken() { return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''; }
-
-function mascaraCpf(v: string) { const d = v.replace(/\D/g, '').slice(0, 11); if (d.length <= 3) return d; if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`; if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`; return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`; }
-function mascaraCnpj(v: string) { const d = v.replace(/\D/g, '').slice(0, 14); if (d.length <= 2) return d; if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`; if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`; if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`; return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`; }
 
 const stepLabels = ['Seu plano', 'Seus dados', 'Sua empresa'];
 
@@ -126,7 +125,7 @@ export default function RegistroPage({ planos, plano_selecionado }: Props) {
                                     {emailDisponivel === false && <p className="mt-1 text-xs text-[#A83232]">Este email já está cadastrado. <a href="/login" className="underline">Faça login.</a></p>}
                                     <InputError message={errors?.email} /></div>
                                 <div><Label>Telefone</Label><InputTelefone value={telefone} onChange={setTelefone} /></div>
-                                <div><Label>CPF</Label><Input value={cpf} onChange={(e) => setCpf(mascaraCpf(e.target.value))} placeholder="000.000.000-00" maxLength={14} className="bg-white border-[#D8DCDA]" /><InputError message={errors?.cpf} /></div>
+                                <div><Label>CPF</Label><InputCpf value={cpf} onChange={setCpf} /><InputError message={errors?.cpf} /></div>
                                 <div><Label>Senha</Label><Input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} className="bg-white border-[#D8DCDA]" />
                                     {senha.length > 0 && (
                                         <div className="mt-1.5 flex items-center gap-2">
@@ -163,9 +162,9 @@ export default function RegistroPage({ planos, plano_selecionado }: Props) {
                                     </div>
                                     <div><Label>{tipoTenant === 'imobiliaria' ? 'Razão social' : 'Nome de identificação'}</Label><Input value={nomeTenant} onChange={(e) => setNomeTenant(e.target.value)} className="bg-white border-[#D8DCDA]" /><InputError message={errors?.nome_tenant} /></div>
                                     {tipoTenant === 'imobiliaria' ? (
-                                        <div><Label>CNPJ</Label><Input value={cnpj} onChange={(e) => setCnpj(mascaraCnpj(e.target.value))} placeholder="00.000.000/0000-00" maxLength={18} className="bg-white border-[#D8DCDA]" /><InputError message={errors?.cnpj} /></div>
+                                        <div><Label>CNPJ</Label><InputCnpj value={cnpj} onChange={setCnpj} /><InputError message={errors?.cnpj} /></div>
                                     ) : (
-                                        <div><Label>Documento (CPF)</Label><Input value={cpf} disabled className="bg-[#F7F8F7]" /></div>
+                                        <div><Label>Documento (CPF)</Label><InputCpf value={cpf} onChange={() => {}} disabled /></div>
                                     )}
                                     <div className="flex items-start gap-2">
                                         <Checkbox checked={termos} onCheckedChange={(c) => setTermos(!!c)} className="mt-1" />

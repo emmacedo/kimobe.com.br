@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Contrato;
 use App\Models\Fiador;
 use App\Services\TenantService;
+use App\Support\Sanitize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -62,6 +63,13 @@ class FiadorController extends Controller
             return response()->json(['message' => 'Máximo de 2 fiadores por contrato.'], 422);
         }
 
+        // Sanitiza campos com máscara antes de validar
+        $request->merge(array_filter([
+            'cpf' => $request->cpf ? Sanitize::cpf($request->cpf) : null,
+            'telefone' => $request->telefone ? Sanitize::telefone($request->telefone) : null,
+            'cep' => $request->cep ? Sanitize::cep($request->cep) : null,
+        ], fn ($v) => $v !== null));
+
         $request->validate($this->validationRules(), $this->validationMessages());
 
         $tenantId = app(TenantService::class)->getTenantId();
@@ -83,6 +91,13 @@ class FiadorController extends Controller
      */
     public function update(Request $request, Contrato $contrato, Fiador $fiador): JsonResponse
     {
+        // Sanitiza campos com máscara antes de validar
+        $request->merge(array_filter([
+            'cpf' => $request->cpf ? Sanitize::cpf($request->cpf) : null,
+            'telefone' => $request->telefone ? Sanitize::telefone($request->telefone) : null,
+            'cep' => $request->cep ? Sanitize::cep($request->cep) : null,
+        ], fn ($v) => $v !== null));
+
         $request->validate($this->validationRules(), $this->validationMessages());
 
         $fiador->update($request->only([

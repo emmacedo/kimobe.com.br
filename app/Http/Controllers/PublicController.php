@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MensagemContato;
 use App\Models\Plano;
+use App\Support\Sanitize;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -39,6 +40,11 @@ class PublicController extends Controller
 
     public function enviarContato(Request $request): RedirectResponse
     {
+        // Sanitiza telefone com máscara antes de validar
+        if ($request->telefone) {
+            $request->merge(['telefone' => Sanitize::telefone($request->telefone)]);
+        }
+
         $request->validate([
             'nome' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],

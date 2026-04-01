@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\Sanitize;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreImovelRequest extends FormRequest
@@ -12,12 +13,22 @@ class StoreImovelRequest extends FormRequest
     }
 
     /**
+     * Sanitiza campos com máscara antes de validar.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('cep') && $this->cep) {
+            $this->merge(['cep' => Sanitize::cep($this->cep)]);
+        }
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function rules(): array
     {
         return [
-            'cep' => ['required', 'string', 'max:9'],
+            'cep' => ['required', 'string', 'max:9'], // Aceita com ou sem máscara (prepareForValidation sanitiza)
             'logradouro' => ['required', 'string', 'max:255'],
             'numero' => ['required', 'string', 'max:20'],
             'complemento' => ['nullable', 'string', 'max:255'],
