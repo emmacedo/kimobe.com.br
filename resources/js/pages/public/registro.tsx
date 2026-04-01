@@ -3,6 +3,7 @@ import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import InputError from '@/components/input-error';
+import { InputTelefone } from '@/components/input-telefone';
 import { PlanoCard } from '@/components/public/plano-card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -124,7 +125,7 @@ export default function RegistroPage({ planos, plano_selecionado }: Props) {
                                 <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setEmailDisponivel(null); }} onBlur={verificarEmail} className="bg-white border-[#D8DCDA]" />
                                     {emailDisponivel === false && <p className="mt-1 text-xs text-[#A83232]">Este email já está cadastrado. <a href="/login" className="underline">Faça login.</a></p>}
                                     <InputError message={errors?.email} /></div>
-                                <div><Label>Telefone</Label><Input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(00) 00000-0000" className="bg-white border-[#D8DCDA]" /></div>
+                                <div><Label>Telefone</Label><InputTelefone value={telefone} onChange={setTelefone} /></div>
                                 <div><Label>CPF</Label><Input value={cpf} onChange={(e) => setCpf(mascaraCpf(e.target.value))} placeholder="000.000.000-00" maxLength={14} className="bg-white border-[#D8DCDA]" /><InputError message={errors?.cpf} /></div>
                                 <div><Label>Senha</Label><Input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} className="bg-white border-[#D8DCDA]" />
                                     {senha.length > 0 && (

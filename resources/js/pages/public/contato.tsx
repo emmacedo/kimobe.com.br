@@ -3,6 +3,7 @@ import { Mail, Phone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import InputError from '@/components/input-error';
+import { InputTelefone } from '@/components/input-telefone';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,7 +48,7 @@ export default function ContatoPage() {
                                 <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-white border-[#D8DCDA]" /><InputError message={errors?.email} /></div>
                             </div>
                             <div className="grid gap-4 sm:grid-cols-2">
-                                <div><Label>Telefone <span className="text-[#8A918E]">(opcional)</span></Label><Input value={telefone} onChange={(e) => setTelefone(e.target.value)} className="bg-white border-[#D8DCDA]" /></div>
+                                <div><Label>Telefone <span className="text-[#8A918E]">(opcional)</span></Label><InputTelefone value={telefone} onChange={setTelefone} /></div>
                                 <div><Label>Assunto</Label><Select value={assunto} onValueChange={setAssunto}><SelectTrigger className="bg-white border-[#D8DCDA]"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{assuntos.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent></Select><InputError message={errors?.assunto} /></div>
                             </div>
                             <div><Label>Mensagem</Label><textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} rows={5} className="w-full rounded-md border border-[#D8DCDA] bg-white px-3 py-2 text-sm focus:border-[#0A4F5C] focus:outline-none focus:ring-1 focus:ring-[#0A4F5C]" /><InputError message={errors?.mensagem} /></div>

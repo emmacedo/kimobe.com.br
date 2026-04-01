@@ -5,6 +5,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FiadorDetalhesDialog } from '@/components/fiador-detalhes-dialog';
 import { InputCep } from '@/components/input-cep';
 import InputError from '@/components/input-error';
+import { InputTelefone } from '@/components/input-telefone';
 import { SelectUf } from '@/components/select-uf';
 import { Button } from '@/components/ui/button';
 import {
@@ -247,7 +248,7 @@ export function GerenciadorFiadores({ contratoId, fiadores: fiadoresIniciais, ti
                             </div>
                             <div>
                                 <Label>Telefone</Label>
-                                <Input value={form.telefone} onChange={(e) => setField('telefone', e.target.value)} placeholder="(00) 00000-0000" className="bg-white border-[#D8DCDA]" />
+                                <InputTelefone value={form.telefone} onChange={(v) => setField('telefone', v)} />
                             </div>
                             <div>
                                 <Label>Email <span className="text-[#8A918E]">(opcional)</span></Label>
