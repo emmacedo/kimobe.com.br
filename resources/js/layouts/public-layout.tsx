@@ -103,8 +103,8 @@ export default function PublicLayout({ children }: Props) {
                         <div>
                             <h4 className="mb-3 text-sm font-medium text-white">Empresa</h4>
                             <div className="space-y-2">
-                                <a href="#" className="block text-sm text-[#8DCAD6] hover:text-white">Termos de uso</a>
-                                <a href="#" className="block text-sm text-[#8DCAD6] hover:text-white">Privacidade</a>
+                                <Link href="/termos-de-uso" className="block text-sm text-[#8DCAD6] hover:text-white">Termos de uso</Link>
+                                <Link href="/politica-de-privacidade" className="block text-sm text-[#8DCAD6] hover:text-white">Privacidade</Link>
                             </div>
                         </div>
                         <div>

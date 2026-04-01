@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Building2, CreditCard, FileEdit, LayoutDashboard, LogOut, Menu, MessageSquare, Receipt, Send, Settings, X } from 'lucide-react';
+import { Building2, CreditCard, FileEdit, FileText, LayoutDashboard, LogOut, Menu, MessageSquare, Receipt, Send, Settings, X } from 'lucide-react';
 import { useState } from 'react';
 import { Toaster } from 'sonner';
 import { useCurrentUrl } from '@/hooks/use-current-url';
@@ -13,6 +13,7 @@ const navLinks: NavLink[] = [
     { title: 'Planos', href: '/admin/planos', icon: CreditCard },
     { title: 'Faturamento', href: '/admin/faturamento', icon: Receipt },
     { title: 'Templates', href: '/admin/templates', icon: FileEdit },
+    { title: 'Páginas', href: '/admin/paginas', icon: FileText },
     { title: 'Emails', href: '/admin/emails', icon: Send },
     { title: 'Mensagens', href: '/admin/mensagens', icon: MessageSquare },
     { title: 'Configurações', href: '/admin/configuracoes', icon: Settings },

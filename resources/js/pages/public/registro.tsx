@@ -168,7 +168,7 @@ export default function RegistroPage({ planos, plano_selecionado }: Props) {
                                     )}
                                     <div className="flex items-start gap-2">
                                         <Checkbox checked={termos} onCheckedChange={(c) => setTermos(!!c)} className="mt-1" />
-                                        <span className="text-xs text-[#6B7370]">Li e aceito os <a href="#" className="text-[#0A4F5C] underline">Termos de Uso</a> e a <a href="#" className="text-[#0A4F5C] underline">Política de Privacidade</a></span>
+                                        <span className="text-xs text-[#6B7370]">Li e aceito os <a href="/termos-de-uso" target="_blank" rel="noopener noreferrer" className="text-[#0A4F5C] underline">Termos de Uso</a> e a <a href="/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="text-[#0A4F5C] underline">Política de Privacidade</a></span>
                                     </div>
                                     <InputError message={errors?.termos} />
                                 </div>

@@ -1,5 +1,16 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminAssinanteController;
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AdminConfiguracaoController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminEmailLogController;
+use App\Http\Controllers\Admin\AdminFaturamentoController;
+use App\Http\Controllers\Admin\AdminMensagemController;
+use App\Http\Controllers\Admin\AdminPaginaController;
+use App\Http\Controllers\Admin\AdminPlanoController;
+use App\Http\Controllers\Admin\AdminTemplateController;
+use App\Http\Controllers\Admin\AdminUsuarioController;
 use App\Http\Controllers\CobrancaComprovanteController;
 use App\Http\Controllers\CobrancaController;
 use App\Http\Controllers\CobrancaItemExtraController;
@@ -7,30 +18,38 @@ use App\Http\Controllers\ContratoController;
 use App\Http\Controllers\ContratoResponsabilidadeController;
 use App\Http\Controllers\DadosBancariosController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmailLogController;
+use App\Http\Controllers\EmailTrackingController;
 use App\Http\Controllers\FiadorController;
 use App\Http\Controllers\ImovelController;
 use App\Http\Controllers\ImovelFotoController;
+use App\Http\Controllers\PaginaInstitucionalController;
+use App\Http\Controllers\PublicController;
+use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\RepasseComprovanteController;
 use App\Http\Controllers\RepasseController;
 use App\Http\Controllers\TenantSelectionController;
 use App\Http\Controllers\TitularidadeController;
 use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
 
 // Pixel de rastreamento de email (rota pública sem auth)
-Route::get('/email/pixel/{token}', [\App\Http\Controllers\EmailTrackingController::class, 'pixel'])->name('email.pixel');
+Route::get('/email/pixel/{token}', [EmailTrackingController::class, 'pixel'])->name('email.pixel');
 
 // Site público
-Route::get('/', [\App\Http\Controllers\PublicController::class, 'home'])->name('home');
-Route::get('/planos', [\App\Http\Controllers\PublicController::class, 'planos'])->name('planos');
-Route::get('/faq', [\App\Http\Controllers\PublicController::class, 'faq'])->name('faq');
-Route::get('/contato', [\App\Http\Controllers\PublicController::class, 'contato'])->name('contato');
-Route::post('/contato', [\App\Http\Controllers\PublicController::class, 'enviarContato'])->name('contato.enviar');
+Route::get('/', [PublicController::class, 'home'])->name('home');
+Route::get('/planos', [PublicController::class, 'planos'])->name('planos');
+Route::get('/faq', [PublicController::class, 'faq'])->name('faq');
+Route::get('/contato', [PublicController::class, 'contato'])->name('contato');
+Route::post('/contato', [PublicController::class, 'enviarContato'])->name('contato.enviar');
+
+// Páginas institucionais (termos de uso, privacidade)
+Route::get('/termos-de-uso', [PaginaInstitucionalController::class, 'show'])->defaults('slug', 'termos-de-uso')->name('termos');
+Route::get('/politica-de-privacidade', [PaginaInstitucionalController::class, 'show'])->defaults('slug', 'politica-de-privacidade')->name('privacidade');
 
 // Registro / assinatura
-Route::get('/registro', [\App\Http\Controllers\RegistroController::class, 'index'])->name('registro');
-Route::post('/registro', [\App\Http\Controllers\RegistroController::class, 'store'])->name('registro.store');
-Route::post('/registro/verificar-email', [\App\Http\Controllers\RegistroController::class, 'verificarEmail'])->name('registro.verificar-email');
+Route::get('/registro', [RegistroController::class, 'index'])->name('registro');
+Route::post('/registro', [RegistroController::class, 'store'])->name('registro.store');
+Route::post('/registro/verificar-email', [RegistroController::class, 'verificarEmail'])->name('registro.verificar-email');
 
 // Rotas de seleção de tenant — apenas auth, SEM middleware tenant
 Route::middleware(['auth'])->group(function () {
@@ -164,8 +183,8 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo'])->group(functio
     // Auditoria de emails (apenas admin do tenant)
     // ----------------------------------------------------------------
     Route::middleware(['role:admin'])->group(function () {
-        Route::get('emails', [\App\Http\Controllers\EmailLogController::class, 'index'])->name('emails.index');
-        Route::get('emails/{emailLog}', [\App\Http\Controllers\EmailLogController::class, 'show'])->name('emails.show');
+        Route::get('emails', [EmailLogController::class, 'index'])->name('emails.index');
+        Route::get('emails/{emailLog}', [EmailLogController::class, 'show'])->name('emails.show');
     });
 
     // ----------------------------------------------------------------
@@ -185,65 +204,70 @@ require __DIR__.'/settings.php';
 // Rotas do painel super admin — guard 'admin', SEM middleware tenant/role
 // ========================================================================
 Route::prefix('admin')->group(function () {
-    Route::get('login', [\App\Http\Controllers\Admin\AdminAuthController::class, 'showLogin'])->name('admin.login');
-    Route::post('login', [\App\Http\Controllers\Admin\AdminAuthController::class, 'login']);
-    Route::post('logout', [\App\Http\Controllers\Admin\AdminAuthController::class, 'logout'])->name('admin.logout');
+    Route::get('login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
+    Route::post('login', [AdminAuthController::class, 'login']);
+    Route::post('logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 
     Route::middleware(['admin.auth'])->group(function () {
-        Route::get('dashboard', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('admin.dashboard');
+        Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
         // Planos
-        Route::get('planos', [\App\Http\Controllers\Admin\AdminPlanoController::class, 'index'])->name('admin.planos.index');
-        Route::post('planos', [\App\Http\Controllers\Admin\AdminPlanoController::class, 'store'])->name('admin.planos.store');
-        Route::put('planos/{plano}', [\App\Http\Controllers\Admin\AdminPlanoController::class, 'update'])->name('admin.planos.update');
-        Route::patch('planos/{plano}/toggle-status', [\App\Http\Controllers\Admin\AdminPlanoController::class, 'toggleStatus'])->name('admin.planos.toggle-status');
-        Route::delete('planos/{plano}', [\App\Http\Controllers\Admin\AdminPlanoController::class, 'destroy'])->name('admin.planos.destroy');
+        Route::get('planos', [AdminPlanoController::class, 'index'])->name('admin.planos.index');
+        Route::post('planos', [AdminPlanoController::class, 'store'])->name('admin.planos.store');
+        Route::put('planos/{plano}', [AdminPlanoController::class, 'update'])->name('admin.planos.update');
+        Route::patch('planos/{plano}/toggle-status', [AdminPlanoController::class, 'toggleStatus'])->name('admin.planos.toggle-status');
+        Route::delete('planos/{plano}', [AdminPlanoController::class, 'destroy'])->name('admin.planos.destroy');
 
         // Assinantes
-        Route::get('assinantes', [\App\Http\Controllers\Admin\AdminAssinanteController::class, 'index'])->name('admin.assinantes.index');
-        Route::get('assinantes/{tenant}', [\App\Http\Controllers\Admin\AdminAssinanteController::class, 'show'])->name('admin.assinantes.show');
-        Route::patch('assinantes/{tenant}/plano', [\App\Http\Controllers\Admin\AdminAssinanteController::class, 'alterarPlano'])->name('admin.assinantes.alterar-plano');
-        Route::patch('assinantes/{tenant}/cortesia', [\App\Http\Controllers\Admin\AdminAssinanteController::class, 'toggleCortesia'])->name('admin.assinantes.toggle-cortesia');
-        Route::patch('assinantes/{tenant}/suspender', [\App\Http\Controllers\Admin\AdminAssinanteController::class, 'suspender'])->name('admin.assinantes.suspender');
-        Route::patch('assinantes/{tenant}/reativar', [\App\Http\Controllers\Admin\AdminAssinanteController::class, 'reativar'])->name('admin.assinantes.reativar');
-        Route::patch('assinantes/{tenant}/cancelar', [\App\Http\Controllers\Admin\AdminAssinanteController::class, 'cancelar'])->name('admin.assinantes.cancelar');
-        Route::patch('assinantes/{tenant}/desbloquear', [\App\Http\Controllers\Admin\AdminAssinanteController::class, 'desbloquear'])->name('admin.assinantes.desbloquear');
+        Route::get('assinantes', [AdminAssinanteController::class, 'index'])->name('admin.assinantes.index');
+        Route::get('assinantes/{tenant}', [AdminAssinanteController::class, 'show'])->name('admin.assinantes.show');
+        Route::patch('assinantes/{tenant}/plano', [AdminAssinanteController::class, 'alterarPlano'])->name('admin.assinantes.alterar-plano');
+        Route::patch('assinantes/{tenant}/cortesia', [AdminAssinanteController::class, 'toggleCortesia'])->name('admin.assinantes.toggle-cortesia');
+        Route::patch('assinantes/{tenant}/suspender', [AdminAssinanteController::class, 'suspender'])->name('admin.assinantes.suspender');
+        Route::patch('assinantes/{tenant}/reativar', [AdminAssinanteController::class, 'reativar'])->name('admin.assinantes.reativar');
+        Route::patch('assinantes/{tenant}/cancelar', [AdminAssinanteController::class, 'cancelar'])->name('admin.assinantes.cancelar');
+        Route::patch('assinantes/{tenant}/desbloquear', [AdminAssinanteController::class, 'desbloquear'])->name('admin.assinantes.desbloquear');
 
         // Usuários da plataforma
-        Route::get('usuarios', [\App\Http\Controllers\Admin\AdminUsuarioController::class, 'index'])->name('admin.usuarios.index');
-        Route::get('usuarios/{user}', [\App\Http\Controllers\Admin\AdminUsuarioController::class, 'show'])->name('admin.usuarios.show');
+        Route::get('usuarios', [AdminUsuarioController::class, 'index'])->name('admin.usuarios.index');
+        Route::get('usuarios/{user}', [AdminUsuarioController::class, 'show'])->name('admin.usuarios.show');
 
         // Faturamento
-        Route::get('faturamento', [\App\Http\Controllers\Admin\AdminFaturamentoController::class, 'index'])->name('admin.faturamento.index');
-        Route::get('faturamento/preview', [\App\Http\Controllers\Admin\AdminFaturamentoController::class, 'preview'])->name('admin.faturamento.preview');
-        Route::post('faturamento/gerar', [\App\Http\Controllers\Admin\AdminFaturamentoController::class, 'gerar'])->name('admin.faturamento.gerar');
-        Route::patch('faturamento/{fatura}/pagamento', [\App\Http\Controllers\Admin\AdminFaturamentoController::class, 'registrarPagamento'])->name('admin.faturamento.pagamento');
-        Route::patch('faturamento/{fatura}/cancelar', [\App\Http\Controllers\Admin\AdminFaturamentoController::class, 'cancelar'])->name('admin.faturamento.cancelar');
+        Route::get('faturamento', [AdminFaturamentoController::class, 'index'])->name('admin.faturamento.index');
+        Route::get('faturamento/preview', [AdminFaturamentoController::class, 'preview'])->name('admin.faturamento.preview');
+        Route::post('faturamento/gerar', [AdminFaturamentoController::class, 'gerar'])->name('admin.faturamento.gerar');
+        Route::patch('faturamento/{fatura}/pagamento', [AdminFaturamentoController::class, 'registrarPagamento'])->name('admin.faturamento.pagamento');
+        Route::patch('faturamento/{fatura}/cancelar', [AdminFaturamentoController::class, 'cancelar'])->name('admin.faturamento.cancelar');
 
         // Configurações
-        Route::get('configuracoes', [\App\Http\Controllers\Admin\AdminConfiguracaoController::class, 'index'])->name('admin.configuracoes.index');
-        Route::put('configuracoes', [\App\Http\Controllers\Admin\AdminConfiguracaoController::class, 'update'])->name('admin.configuracoes.update');
+        Route::get('configuracoes', [AdminConfiguracaoController::class, 'index'])->name('admin.configuracoes.index');
+        Route::put('configuracoes', [AdminConfiguracaoController::class, 'update'])->name('admin.configuracoes.update');
 
         // Ação manual
-        Route::post('executar-inadimplencia', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'executarInadimplencia'])->name('admin.executar-inadimplencia');
+        Route::post('executar-inadimplencia', [AdminDashboardController::class, 'executarInadimplencia'])->name('admin.executar-inadimplencia');
 
         // Mensagens de contato
-        Route::get('mensagens', [\App\Http\Controllers\Admin\AdminMensagemController::class, 'index'])->name('admin.mensagens.index');
-        Route::get('mensagens/{mensagem}', [\App\Http\Controllers\Admin\AdminMensagemController::class, 'show'])->name('admin.mensagens.show');
-        Route::patch('mensagens/{mensagem}/lida', [\App\Http\Controllers\Admin\AdminMensagemController::class, 'marcarLida'])->name('admin.mensagens.lida');
-        Route::patch('mensagens/{mensagem}/respondida', [\App\Http\Controllers\Admin\AdminMensagemController::class, 'marcarRespondida'])->name('admin.mensagens.respondida');
+        Route::get('mensagens', [AdminMensagemController::class, 'index'])->name('admin.mensagens.index');
+        Route::get('mensagens/{mensagem}', [AdminMensagemController::class, 'show'])->name('admin.mensagens.show');
+        Route::patch('mensagens/{mensagem}/lida', [AdminMensagemController::class, 'marcarLida'])->name('admin.mensagens.lida');
+        Route::patch('mensagens/{mensagem}/respondida', [AdminMensagemController::class, 'marcarRespondida'])->name('admin.mensagens.respondida');
 
         // Templates de email
-        Route::get('templates', [\App\Http\Controllers\Admin\AdminTemplateController::class, 'index'])->name('admin.templates.index');
-        Route::get('templates/{template}/editar', [\App\Http\Controllers\Admin\AdminTemplateController::class, 'edit'])->name('admin.templates.edit');
-        Route::put('templates/{template}', [\App\Http\Controllers\Admin\AdminTemplateController::class, 'update'])->name('admin.templates.update');
-        Route::patch('templates/{template}/toggle-status', [\App\Http\Controllers\Admin\AdminTemplateController::class, 'toggleStatus']);
-        Route::post('templates/{template}/enviar-teste', [\App\Http\Controllers\Admin\AdminTemplateController::class, 'enviarTeste']);
-        Route::post('templates/{template}/preview', [\App\Http\Controllers\Admin\AdminTemplateController::class, 'preview']);
+        Route::get('templates', [AdminTemplateController::class, 'index'])->name('admin.templates.index');
+        Route::get('templates/{template}/editar', [AdminTemplateController::class, 'edit'])->name('admin.templates.edit');
+        Route::put('templates/{template}', [AdminTemplateController::class, 'update'])->name('admin.templates.update');
+        Route::patch('templates/{template}/toggle-status', [AdminTemplateController::class, 'toggleStatus']);
+        Route::post('templates/{template}/enviar-teste', [AdminTemplateController::class, 'enviarTeste']);
+        Route::post('templates/{template}/preview', [AdminTemplateController::class, 'preview']);
+
+        // Páginas institucionais
+        Route::get('paginas', [AdminPaginaController::class, 'index'])->name('admin.paginas.index');
+        Route::get('paginas/{pagina}/editar', [AdminPaginaController::class, 'edit'])->name('admin.paginas.edit');
+        Route::put('paginas/{pagina}', [AdminPaginaController::class, 'update'])->name('admin.paginas.update');
 
         // Auditoria de emails
-        Route::get('emails', [\App\Http\Controllers\Admin\AdminEmailLogController::class, 'index'])->name('admin.emails.index');
-        Route::get('emails/{emailLog}', [\App\Http\Controllers\Admin\AdminEmailLogController::class, 'show']);
-        Route::post('emails/{emailLog}/reenviar', [\App\Http\Controllers\Admin\AdminEmailLogController::class, 'reenviar']);
+        Route::get('emails', [AdminEmailLogController::class, 'index'])->name('admin.emails.index');
+        Route::get('emails/{emailLog}', [AdminEmailLogController::class, 'show']);
+        Route::post('emails/{emailLog}/reenviar', [AdminEmailLogController::class, 'reenviar']);
     });
 });
