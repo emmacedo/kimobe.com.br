@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 
 type Props = {
@@ -9,83 +9,64 @@ type Props = {
 };
 
 /**
- * Formata número para exibição monetária pt-BR com prefixo R$.
- * Ex: 1500.5 → "R$ 1.500,50"
+ * Converte centavos (inteiro) para string formatada pt-BR.
+ * Ex: 3990 → "R$ 39,90" | 150000 → "R$ 1.500,00" | 0 → "R$ 0,00"
  */
-function formatarParaExibicao(valor: number | null): string {
-    if (valor === null || valor === undefined || isNaN(valor)) return '';
-    return 'R$ ' + valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function centavosParaDisplay(centavos: number): string {
+    if (centavos === 0) return '';
+    const reais = centavos / 100;
+    return 'R$ ' + reais.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /**
- * Extrai valor numérico de string pt-BR (aceita ponto como milhar e vírgula como decimal).
- * Ex: "1.500,50" → 1500.5 | "999" → 999 | "12,5" → 12.5
+ * Converte valor numérico (reais com decimais) para centavos inteiros.
+ * Ex: 39.9 → 3990 | 1500 → 150000
  */
-function extrairValor(texto: string): number | null {
-    // Remove tudo exceto dígitos, vírgula e ponto
-    const limpo = texto.replace(/[^\d.,]/g, '');
-    if (!limpo) return null;
-    // Remove pontos de milhar e troca vírgula decimal por ponto
-    const normalizado = limpo.replace(/\./g, '').replace(',', '.');
-    const numero = parseFloat(normalizado);
-    return isNaN(numero) ? null : numero;
+function reaisParaCentavos(valor: number): number {
+    return Math.round(valor * 100);
 }
 
 /**
- * Input monetário pt-BR.
- * Permite digitação livre (sem reformatar a cada tecla) e formata apenas no blur,
- * evitando o ciclo de feedback que corrompia valores acima de 3 dígitos.
+ * Input monetário pt-BR com máscara estilo caixa registradora.
+ * O usuário digita apenas números e os centavos são posicionados automaticamente.
+ * Ex: digitar "3990" exibe "R$ 39,90", digitar "15000" exibe "R$ 150,00".
  */
 export function InputMoeda({ value, onChange, className, placeholder = 'R$ 0,00' }: Props) {
+    // Converte o valor externo (em reais) para centavos inteiros para controle interno
     const numValue = typeof value === 'string' ? parseFloat(value) : (value ?? null);
+    const [centavos, setCentavos] = useState<number>(() =>
+        numValue !== null && !isNaN(numValue) ? reaisParaCentavos(numValue) : 0
+    );
 
-    // Estado interno controla o texto exibido — só formata no blur ou quando value muda externamente
-    const [textoInterno, setTextoInterno] = useState(() => formatarParaExibicao(numValue));
-    const focadoRef = useRef(false);
-
-    // Sincroniza o texto exibido quando o valor externo muda (ex: ao abrir edição)
-    // mas NÃO reformata enquanto o campo estiver focado (usuário digitando)
+    // Sincroniza quando o valor externo muda (ex: ao abrir edição de um plano)
     useEffect(() => {
-        if (!focadoRef.current) {
-            setTextoInterno(formatarParaExibicao(numValue));
-        }
+        const novoCentavos = numValue !== null && !isNaN(numValue) ? reaisParaCentavos(numValue) : 0;
+        setCentavos(novoCentavos);
     }, [numValue]);
 
     function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const raw = e.target.value;
-        // Atualiza o texto exibido sem reformatar — permite digitação livre
-        setTextoInterno(raw);
+        // Extrai apenas dígitos do input
+        const apenasDigitos = e.target.value.replace(/\D/g, '');
 
-        // Propaga o valor numérico para o estado pai
-        if (!raw || raw.trim() === 'R$' || raw.trim() === 'R$ ') {
+        // Converte para inteiro (centavos)
+        const novosCentavos = parseInt(apenasDigitos, 10) || 0;
+        setCentavos(novosCentavos);
+
+        // Propaga o valor em reais para o componente pai
+        if (novosCentavos === 0) {
             onChange(null);
-            return;
+        } else {
+            onChange(novosCentavos / 100);
         }
-        const numero = extrairValor(raw);
-        onChange(numero);
-    }
-
-    function handleFocus() {
-        focadoRef.current = true;
-    }
-
-    function handleBlur() {
-        focadoRef.current = false;
-        // Ao sair do campo, reformata para exibição limpa (R$ 1.500,00)
-        const numero = extrairValor(textoInterno);
-        onChange(numero);
-        setTextoInterno(formatarParaExibicao(numero));
     }
 
     return (
         <Input
-            value={textoInterno}
+            value={centavosParaDisplay(centavos)}
             onChange={handleChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
             placeholder={placeholder}
             className={`bg-white border-[#D8DCDA] ${className ?? ''}`}
-            inputMode="decimal"
+            inputMode="numeric"
         />
     );
 }
