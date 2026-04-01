@@ -74,13 +74,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo'])->group(functio
     // ----------------------------------------------------------------
     // Imóveis — admin gerencia, proprietário visualiza
     // ----------------------------------------------------------------
-    // Visualização: admin e proprietário
-    Route::middleware(['role:admin,proprietario'])->group(function () {
-        Route::get('imoveis', [ImovelController::class, 'index'])->name('imoveis.index');
-        Route::get('imoveis/{imovel}', [ImovelController::class, 'show'])->name('imoveis.show');
-    });
-
-    // Gestão: apenas admin
+    // Gestão: apenas admin (rotas estáticas ANTES das parametrizadas para evitar conflito)
     Route::middleware(['role:admin'])->group(function () {
         Route::get('imoveis/criar', [ImovelController::class, 'create'])->name('imoveis.create');
         Route::post('imoveis', [ImovelController::class, 'store'])->name('imoveis.store');
@@ -100,14 +94,16 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo'])->group(functio
         Route::delete('imoveis/{imovel}/titularidades/{titularidade}', [TitularidadeController::class, 'destroy']);
     });
 
+    // Visualização: admin e proprietário (APÓS rotas estáticas para evitar conflito com {imovel})
+    Route::middleware(['role:admin,proprietario'])->group(function () {
+        Route::get('imoveis', [ImovelController::class, 'index'])->name('imoveis.index');
+        Route::get('imoveis/{imovel}', [ImovelController::class, 'show'])->name('imoveis.show');
+    });
+
     // ----------------------------------------------------------------
     // Contratos — todos os papéis veem, admin gerencia
     // ----------------------------------------------------------------
-    Route::middleware(['role:admin,proprietario,inquilino'])->group(function () {
-        Route::get('contratos', [ContratoController::class, 'index'])->name('contratos.index');
-        Route::get('contratos/{contrato}', [ContratoController::class, 'show'])->name('contratos.show');
-    });
-
+    // Gestão: apenas admin (rotas estáticas ANTES das parametrizadas)
     Route::middleware(['role:admin'])->group(function () {
         Route::get('contratos/criar', [ContratoController::class, 'create'])->name('contratos.create');
         Route::post('contratos', [ContratoController::class, 'store'])->name('contratos.store');
@@ -127,15 +123,15 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo'])->group(functio
         Route::delete('contratos/{contrato}/fiadores/{fiador}', [FiadorController::class, 'destroy']);
     });
 
+    // Visualização: todos os papéis (APÓS rotas estáticas para evitar conflito com {contrato})
+    Route::middleware(['role:admin,proprietario,inquilino'])->group(function () {
+        Route::get('contratos', [ContratoController::class, 'index'])->name('contratos.index');
+        Route::get('contratos/{contrato}', [ContratoController::class, 'show'])->name('contratos.show');
+    });
+
     // ----------------------------------------------------------------
     // Financeiro — Cobranças
     // ----------------------------------------------------------------
-    // Visualização: todos os papéis
-    Route::middleware(['role:admin,proprietario,inquilino'])->group(function () {
-        Route::get('financeiro/cobrancas', [CobrancaController::class, 'index'])->name('cobrancas.index');
-        Route::get('financeiro/cobrancas/{cobranca}', [CobrancaController::class, 'show'])->name('cobrancas.show');
-    });
-
     // Gestão: apenas admin (rotas estáticas ANTES das parametrizadas)
     Route::middleware(['role:admin'])->group(function () {
         Route::get('financeiro/cobrancas/criar', [CobrancaController::class, 'create'])->name('cobrancas.create');
@@ -158,15 +154,15 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo'])->group(functio
         Route::delete('financeiro/cobrancas/{cobranca}/comprovantes/{comprovante}', [CobrancaComprovanteController::class, 'destroy']);
     });
 
+    // Visualização de cobranças: todos os papéis (APÓS rotas estáticas para evitar conflito com {cobranca})
+    Route::middleware(['role:admin,proprietario,inquilino'])->group(function () {
+        Route::get('financeiro/cobrancas', [CobrancaController::class, 'index'])->name('cobrancas.index');
+        Route::get('financeiro/cobrancas/{cobranca}', [CobrancaController::class, 'show'])->name('cobrancas.show');
+    });
+
     // ----------------------------------------------------------------
     // Financeiro — Repasses
     // ----------------------------------------------------------------
-    // Visualização: admin e proprietário
-    Route::middleware(['role:admin,proprietario'])->group(function () {
-        Route::get('financeiro/repasses', [RepasseController::class, 'index'])->name('repasses.index');
-        Route::get('financeiro/repasses/{repasse}', [RepasseController::class, 'show'])->name('repasses.show');
-    });
-
     // Gestão: apenas admin (estáticas ANTES das parametrizadas)
     Route::middleware(['role:admin'])->group(function () {
         Route::patch('financeiro/repasses/confirmar-lote', [RepasseController::class, 'confirmarLote'])->name('repasses.confirmar-lote');
@@ -177,6 +173,12 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo'])->group(functio
         Route::post('financeiro/repasses/{repasse}/comprovantes', [RepasseComprovanteController::class, 'store']);
         Route::patch('financeiro/repasses/{repasse}/comprovantes/{comprovante}', [RepasseComprovanteController::class, 'update']);
         Route::delete('financeiro/repasses/{repasse}/comprovantes/{comprovante}', [RepasseComprovanteController::class, 'destroy']);
+    });
+
+    // Visualização de repasses: admin e proprietário (APÓS rotas estáticas)
+    Route::middleware(['role:admin,proprietario'])->group(function () {
+        Route::get('financeiro/repasses', [RepasseController::class, 'index'])->name('repasses.index');
+        Route::get('financeiro/repasses/{repasse}', [RepasseController::class, 'show'])->name('repasses.show');
     });
 
     // ----------------------------------------------------------------
