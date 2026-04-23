@@ -31,8 +31,8 @@ export default function PublicLayout({ children }: Props) {
                 scrolled ? 'bg-white shadow-sm' : 'bg-transparent',
             )}>
                 <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
-                    <Link href="/" className={cn('text-lg font-medium tracking-tight transition-colors', scrolled ? 'text-[#0A4F5C]' : 'text-[#E4CC82]')}>
-                        kimobe
+                    <Link href="/">
+                        <img src="/logo-kimobe.webp" alt="Kimobe" className="h-8" />
                     </Link>
 
                     {/* Desktop nav */}
@@ -88,7 +88,7 @@ export default function PublicLayout({ children }: Props) {
                 <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
                     <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
                         <div>
-                            <span className="text-lg font-medium text-[#E4CC82]">kimobe</span>
+                            <img src="/logo-kimobe.webp" alt="Kimobe" className="h-8" />
                             <p className="mt-3 text-sm text-[#8DCAD6]">
                                 Gestão completa de aluguéis para imobiliárias e proprietários. Simples, seguro e acessível.
                             </p>

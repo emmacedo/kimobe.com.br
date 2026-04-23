@@ -72,7 +72,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <button onClick={() => setMobileOpen(true)} className="text-[#1E2D30]">
                         <Menu className="h-5 w-5" />
                     </button>
-                    <span className="ml-3 text-sm font-medium text-[#E4CC82]">kimobe</span>
+                    <img src="/logo-kimobe.webp" alt="Kimobe" className="ml-3 h-5" />
                     <span className="ml-2 rounded-full bg-[#C9A84C]/15 px-2 py-0.5 text-[10px] font-medium text-[#C9A84C]">Admin</span>
                 </div>
 
@@ -105,7 +105,7 @@ function SidebarContent({
         <div className="flex h-full flex-col">
             {/* Logo */}
             <div className="px-5 pt-6 pb-2">
-                <span className="text-lg font-medium tracking-tight text-[#E4CC82]">kimobe</span>
+                <img src="/logo-kimobe.webp" alt="Kimobe" className="h-8" />
                 <div className="mt-1.5">
                     <span className="rounded-full bg-[#C9A84C]/15 px-2.5 py-0.5 text-[10px] font-medium text-[#E4CC82]">
                         Administração

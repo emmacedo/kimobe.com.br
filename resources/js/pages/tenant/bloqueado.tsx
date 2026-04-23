@@ -33,7 +33,7 @@ export default function TenantBloqueado({ tenant, has_multiple_tenants }: Props)
                         <cfg.icon className="h-7 w-7" style={{ color: cfg.cor }} />
                     </div>
 
-                    <span className="text-lg font-medium tracking-tight text-[#E4CC82]">kimobe</span>
+                    <img src="/logo-kimobe.webp" alt="Kimobe" className="h-8" />
 
                     <h1 className="mt-4 text-xl font-medium text-[#1E2D30]">{cfg.titulo}</h1>
                     <p className="mt-2 text-sm text-[#6B7370]">{cfg.mensagem}</p>

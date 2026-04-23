@@ -28,8 +28,8 @@ export default function AuthLayout({
             {/* Conteúdo centralizado */}
             <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-8">
                 {/* Logo */}
-                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-md">
-                    <span className="text-xl font-medium tracking-tight text-[#E4CC82]">k</span>
+                <div className="mb-6 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full shadow-md">
+                    <img src="/kimobe-abrev.png" alt="Kimobe" className="h-full w-full object-cover" />
                 </div>
 
                 {/* Card */}

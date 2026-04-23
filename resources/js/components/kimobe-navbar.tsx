@@ -84,8 +84,8 @@ export function KimobeNavbar() {
         <nav className="sticky top-0 z-50 bg-[#0A4F5C]">
             <div className="mx-auto flex h-14 items-center justify-between px-4 md:px-6">
                 {/* Logo */}
-                <Link href="/dashboard" className="text-lg font-medium tracking-tight text-[#E4CC82]">
-                    kimobe
+                <Link href="/dashboard">
+                    <img src="/logo-kimobe.webp" alt="Kimobe" className="h-8" />
                 </Link>
 
                 {/* Links desktop */}
