@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 
 #[Fillable(['nome', 'email', 'senha_hash'])]
-#[Hidden(['senha_hash', 'remember_token'])]
+#[Hidden(['senha_hash', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class AdminUser extends Authenticatable
 {
     /** @use HasFactory<AdminUserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     protected $table = 'admin_users';
 
@@ -24,5 +25,12 @@ class AdminUser extends Authenticatable
     public function getAuthPassword(): string
     {
         return $this->senha_hash;
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'two_factor_confirmed_at' => 'datetime',
+        ];
     }
 }

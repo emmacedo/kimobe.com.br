@@ -30,11 +30,26 @@ class AdminAuthController extends Controller
             'password.required' => 'Informe a senha.',
         ]);
 
-        // Autenticar com guard admin (campo de senha é 'senha_hash')
         if (Auth::guard('admin')->attempt(
             ['email' => $request->email, 'password' => $request->password],
             $request->boolean('remember'),
         )) {
+            $admin = Auth::guard('admin')->user();
+
+            // Se 2FA está ativo, redirecionar para o challenge sem manter a sessão autenticada
+            if ($admin->hasEnabledTwoFactorAuthentication()) {
+                $pendingId = $admin->getKey();
+                $remember = $request->boolean('remember');
+
+                Auth::guard('admin')->logout();
+                $request->session()->regenerate();
+
+                $request->session()->put('admin.2fa_pending_id', $pendingId);
+                $request->session()->put('admin.2fa_remember', $remember);
+
+                return redirect()->route('admin.two-factor.challenge');
+            }
+
             $request->session()->regenerate();
 
             return redirect()->route('admin.dashboard');
@@ -49,6 +64,7 @@ class AdminAuthController extends Controller
     {
         Auth::guard('admin')->logout();
 
+        $request->session()->forget(['admin.2fa_pending_id', 'admin.2fa_remember']);
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

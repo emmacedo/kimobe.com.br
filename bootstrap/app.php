@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AdminAuthenticate;
+use App\Http\Middleware\AdminRequire2FA;
 use App\Http\Middleware\CheckTenantBloqueado;
 use App\Http\Middleware\EnsureHasRole;
 use App\Http\Middleware\EnsureTenantSelected;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.ativo' => CheckTenantBloqueado::class,
             'role' => EnsureHasRole::class,
             'admin.auth' => AdminAuthenticate::class,
+            'admin.require2fa' => AdminRequire2FA::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

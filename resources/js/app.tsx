@@ -20,6 +20,7 @@ createInertiaApp({
             case name.startsWith('auth/'):
             case name.startsWith('tenant/'):
             case name === 'admin/auth/login':
+            case name === 'admin/auth/two-factor-challenge':
                 return null;
             case name.startsWith('admin/'):
                 return AdminLayout;
