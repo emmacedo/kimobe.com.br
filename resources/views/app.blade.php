@@ -27,23 +27,25 @@
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
         {{-- JSON-LD: Organization (sitewide) --}}
-        <script type="application/ld+json">
-            {!! json_encode([
+        @php
+            $__appUrl = rtrim(config('app.url'), '/');
+            $__organizationLd = json_encode([
                 '@context' => 'https://schema.org',
                 '@type' => 'Organization',
                 'name' => 'Kimobe',
-                'url' => rtrim(config('app.url'), '/'),
-                'logo' => rtrim(config('app.url'), '/').'/logo-kimobe.png',
+                'url' => $__appUrl,
+                'logo' => $__appUrl.'/logo-kimobe.png',
                 'description' => 'Plataforma SaaS de gestão de aluguéis para imobiliárias e proprietários. Administre imóveis, contratos, cobranças e repasses em um só lugar.',
                 'inLanguage' => 'pt-BR',
                 'contactPoint' => [
                     '@type' => 'ContactPoint',
                     'contactType' => 'customer support',
-                    'url' => rtrim(config('app.url'), '/').'/contato',
+                    'url' => $__appUrl.'/contato',
                     'availableLanguage' => ['Portuguese'],
                 ],
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
-        </script>
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        @endphp
+        <script type="application/ld+json">{!! $__organizationLd !!}</script>
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
