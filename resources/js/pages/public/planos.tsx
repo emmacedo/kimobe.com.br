@@ -1,8 +1,9 @@
-import { Head } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import { JsonLd } from '@/components/json-ld';
 import { PlanoCard } from '@/components/public/plano-card';
 import { SectionTitle } from '@/components/public/section-title';
+import { SeoHead } from '@/components/seo-head';
 
 type PlanoData = { id: number; nome: string; descricao: string | null; limite_imoveis: number; valor_mensal: string; ordem: number };
 type Props = { planos: PlanoData[] };
@@ -19,9 +20,41 @@ export default function PlanosPage({ planos }: Props) {
 
     return (
         <>
-            <Head title="Planos e Preços — Kimobe">
-                <meta name="description" content="Conheça os planos do Kimobe. Gestão completa de aluguéis para todos os tamanhos de carteira." />
-            </Head>
+            <SeoHead
+                title="Planos e Preços — Kimobe"
+                description="Conheça os planos do Kimobe. Gestão completa de aluguéis para imobiliárias e proprietários — escolha o plano ideal para o tamanho da sua carteira."
+            >
+                <JsonLd
+                    data={{
+                        '@context': 'https://schema.org',
+                        '@type': 'ItemList',
+                        name: 'Planos Kimobe',
+                        itemListElement: planos.map((plano, idx) => ({
+                            '@type': 'ListItem',
+                            position: idx + 1,
+                            item: {
+                                '@type': 'Product',
+                                name: `Kimobe ${plano.nome}`,
+                                description: plano.descricao ?? `Plano ${plano.nome} — até ${plano.limite_imoveis} imóveis administrados.`,
+                                brand: { '@type': 'Brand', name: 'Kimobe' },
+                                offers: {
+                                    '@type': 'Offer',
+                                    price: Number(plano.valor_mensal).toFixed(2),
+                                    priceCurrency: 'BRL',
+                                    availability: 'https://schema.org/InStock',
+                                    priceSpecification: {
+                                        '@type': 'UnitPriceSpecification',
+                                        price: Number(plano.valor_mensal).toFixed(2),
+                                        priceCurrency: 'BRL',
+                                        unitCode: 'MON',
+                                        billingDuration: 1,
+                                    },
+                                },
+                            },
+                        })),
+                    }}
+                />
+            </SeoHead>
 
             {/* Hero */}
             <section className="bg-[#0A4F5C] px-4 pt-28 pb-16 text-center">

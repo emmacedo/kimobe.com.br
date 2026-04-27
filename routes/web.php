@@ -30,12 +30,16 @@ use App\Http\Controllers\PublicController;
 use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\RepasseComprovanteController;
 use App\Http\Controllers\RepasseController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\TenantSelectionController;
 use App\Http\Controllers\TitularidadeController;
 use Illuminate\Support\Facades\Route;
 
 // Pixel de rastreamento de email (rota pública sem auth)
 Route::get('/email/pixel/{token}', [EmailTrackingController::class, 'pixel'])->name('email.pixel');
+
+// SEO — sitemap (rota pública sem auth)
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Site público
 Route::get('/', [PublicController::class, 'home'])->name('home');

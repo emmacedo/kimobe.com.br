@@ -1,2 +1,27 @@
+# Kimobe — gestão de aluguéis online
+# https://kimobe.com.br
+
 User-agent: *
-Disallow:
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /imoveis
+Disallow: /contratos
+Disallow: /cobrancas
+Disallow: /repasses
+Disallow: /fiadores
+Disallow: /dados-bancarios
+Disallow: /settings
+Disallow: /selecionar-contexto
+Disallow: /sem-acesso
+Disallow: /bloqueado
+Disallow: /trocar-contexto
+Disallow: /email/pixel
+Disallow: /login
+Disallow: /logout
+Disallow: /password
+Disallow: /verify-email
+Disallow: /two-factor-challenge
+Disallow: /confirm-password
+Allow: /
+
+Sitemap: https://kimobe.com.br/sitemap.xml

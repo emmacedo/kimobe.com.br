@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ConfiguracaoCobrancaKimobe;
 use App\Services\TenantService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -41,6 +42,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'app_url' => rtrim(config('app.url'), '/'),
             'auth' => [
                 'user' => $request->user(),
             ],
@@ -131,7 +133,7 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
-        $config = \App\Models\ConfiguracaoCobrancaKimobe::first();
+        $config = ConfiguracaoCobrancaKimobe::first();
         if (! $config) {
             return null;
         }
@@ -175,7 +177,7 @@ class HandleInertiaRequests extends Middleware
                 'valor' => (float) $faturaPendente->valor,
                 'dias_atraso' => 0,
                 'dias_para_bloqueio' => 0,
-                'mensagem' => "Sua fatura de {$faturaPendente->referencia} no valor de R$ " . number_format($faturaPendente->valor, 2, ',', '.') . " vence em {$diasRestantes} dia(s).",
+                'mensagem' => "Sua fatura de {$faturaPendente->referencia} no valor de R$ ".number_format($faturaPendente->valor, 2, ',', '.')." vence em {$diasRestantes} dia(s).",
             ];
         }
 

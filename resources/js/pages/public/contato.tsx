@@ -1,9 +1,10 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { Mail, Phone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import InputError from '@/components/input-error';
 import { InputTelefone } from '@/components/input-telefone';
+import { SeoHead } from '@/components/seo-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,7 +33,10 @@ export default function ContatoPage() {
 
     return (
         <>
-            <Head title="Contato — Kimobe"><meta name="description" content="Entre em contato com a equipe Kimobe." /></Head>
+            <SeoHead
+                title="Contato — Kimobe"
+                description="Fale com a equipe Kimobe. Tire dúvidas, peça suporte ou converse sobre planos para imobiliárias e proprietários."
+            />
 
             <section className="bg-[#0A4F5C] px-4 pt-28 pb-16 text-center">
                 <h1 className="text-3xl font-bold text-white sm:text-4xl">Fale conosco</h1>

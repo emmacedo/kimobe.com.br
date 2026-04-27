@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Building2, CreditCard, FileEdit, FileText, LayoutDashboard, LogOut, Menu, MessageSquare, Receipt, Send, Settings, UserCog, X } from 'lucide-react';
 import { useState } from 'react';
 import { Toaster } from 'sonner';
@@ -35,6 +35,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <div className="flex min-h-screen">
+            <Head>
+                <meta name="robots" content="noindex, nofollow" />
+            </Head>
             {/* Sidebar desktop */}
             <aside className="hidden w-60 shrink-0 flex-col bg-[#073B45] lg:flex">
                 <SidebarContent

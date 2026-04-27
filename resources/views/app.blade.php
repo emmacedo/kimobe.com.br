@@ -18,10 +18,32 @@
         </style>
 
         <link rel="icon" href="/favicon.ico" sizes="any">
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="manifest" href="/site.webmanifest">
+        <meta name="theme-color" content="#0A4F5C">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
+
+        {{-- JSON-LD: Organization (sitewide) --}}
+        <script type="application/ld+json">
+            {!! json_encode([
+                '@context' => 'https://schema.org',
+                '@type' => 'Organization',
+                'name' => 'Kimobe',
+                'url' => rtrim(config('app.url'), '/'),
+                'logo' => rtrim(config('app.url'), '/').'/logo-kimobe.png',
+                'description' => 'Plataforma SaaS de gestão de aluguéis para imobiliárias e proprietários. Administre imóveis, contratos, cobranças e repasses em um só lugar.',
+                'inLanguage' => 'pt-BR',
+                'contactPoint' => [
+                    '@type' => 'ContactPoint',
+                    'contactType' => 'customer support',
+                    'url' => rtrim(config('app.url'), '/').'/contato',
+                    'availableLanguage' => ['Portuguese'],
+                ],
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+        </script>
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])

@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -7,6 +7,7 @@ import { InputCpf } from '@/components/input-cpf';
 import InputError from '@/components/input-error';
 import { InputTelefone } from '@/components/input-telefone';
 import { PlanoCard } from '@/components/public/plano-card';
+import { SeoHead } from '@/components/seo-head';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -63,7 +64,10 @@ export default function RegistroPage({ planos, plano_selecionado }: Props) {
 
     return (
         <>
-            <Head title="Criar conta — Kimobe"><meta name="description" content="Crie sua conta no Kimobe e comece a gerenciar seus aluguéis." /></Head>
+            <SeoHead
+                title="Criar conta — Kimobe"
+                description="Crie sua conta no Kimobe e comece a gerenciar seus aluguéis. Cadastro rápido, sem cartão de crédito para começar."
+            />
 
             <section className="bg-[#0A4F5C] px-4 pt-28 pb-12 text-center">
                 <h1 className="text-3xl font-bold text-white">Crie sua conta</h1>

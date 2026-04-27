@@ -1,7 +1,9 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import { JsonLd } from '@/components/json-ld';
 import { SectionTitle } from '@/components/public/section-title';
+import { SeoHead } from '@/components/seo-head';
 
 const categorias = [
     { nome: 'Sobre o Kimobe', perguntas: [
@@ -31,7 +33,27 @@ export default function FaqPage() {
 
     return (
         <>
-            <Head title="FAQ — Perguntas Frequentes — Kimobe"><meta name="description" content="Tire suas dúvidas sobre o Kimobe. Saiba mais sobre planos, funcionalidades, pagamento e segurança." /></Head>
+            <SeoHead
+                title="FAQ — Perguntas Frequentes — Kimobe"
+                description="Tire suas dúvidas sobre o Kimobe. Saiba mais sobre planos, funcionalidades, pagamento, segurança e como gerenciar aluguéis na plataforma."
+            >
+                <JsonLd
+                    data={{
+                        '@context': 'https://schema.org',
+                        '@type': 'FAQPage',
+                        mainEntity: categorias.flatMap((cat) =>
+                            cat.perguntas.map((p) => ({
+                                '@type': 'Question',
+                                name: p.q,
+                                acceptedAnswer: {
+                                    '@type': 'Answer',
+                                    text: p.a,
+                                },
+                            })),
+                        ),
+                    }}
+                />
+            </SeoHead>
 
             <section className="bg-[#0A4F5C] px-4 pt-28 pb-16 text-center">
                 <h1 className="text-3xl font-bold text-white sm:text-4xl">Perguntas frequentes</h1>

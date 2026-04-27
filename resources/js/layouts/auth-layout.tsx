@@ -1,3 +1,4 @@
+import { Head } from '@inertiajs/react';
 import { CreditosKicol } from '@/components/creditos-kicol';
 
 type Props = {
@@ -21,6 +22,9 @@ export default function AuthLayout({
 
     return (
         <div className="relative flex min-h-svh flex-col">
+            <Head>
+                <meta name="robots" content="noindex, nofollow" />
+            </Head>
             {/* Fundo dividido */}
             <div className={`absolute inset-x-0 top-0 h-[45%] ${bgColor}`} />
             <div className="absolute inset-x-0 bottom-0 h-[55%] bg-[#F7F8F7]" />

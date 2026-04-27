@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { SeoHead } from '@/components/seo-head';
 
 type Props = {
     titulo: string;
@@ -10,9 +10,11 @@ type Props = {
 export default function PaginaInstitucional({ titulo, conteudo, meta_description, updated_at }: Props) {
     return (
         <>
-            <Head title={titulo}>
-                {meta_description && <meta name="description" content={meta_description} />}
-            </Head>
+            <SeoHead
+                title={`${titulo} — Kimobe`}
+                description={meta_description ?? `${titulo} — Kimobe.`}
+                type="article"
+            />
 
             {/* Hero */}
             <section className="bg-[#0A4F5C] px-4 pt-28 pb-12 text-center">

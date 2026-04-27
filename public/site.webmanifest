@@ -1,0 +1,29 @@
+{
+    "name": "Kimobe — Gestão de Aluguéis",
+    "short_name": "Kimobe",
+    "description": "Plataforma de gestão de aluguéis para imobiliárias e proprietários.",
+    "lang": "pt-BR",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#0A4F5C",
+    "icons": [
+        {
+            "src": "/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        },
+        {
+            "src": "/logo-kimobe.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ]
+}

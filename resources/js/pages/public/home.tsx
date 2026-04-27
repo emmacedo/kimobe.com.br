@@ -1,8 +1,10 @@
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { ArrowRightLeft, ChevronDown, FileText, Home, Receipt, TrendingUp, User } from 'lucide-react';
+import { JsonLd } from '@/components/json-ld';
 import { FeatureCard } from '@/components/public/feature-card';
 import { PlanoCard } from '@/components/public/plano-card';
 import { SectionTitle } from '@/components/public/section-title';
+import { SeoHead } from '@/components/seo-head';
 import { formataMoeda } from '@/lib/utils';
 
 type PlanoData = { id: number; nome: string; descricao: string | null; limite_imoveis: number; valor_mensal: string; ordem: number };
@@ -26,9 +28,29 @@ const steps = [
 export default function HomePage({ planos }: Props) {
     return (
         <>
-            <Head title="Kimobe — Gestão de Aluguéis Simplificada">
-                <meta name="description" content="Administre imóveis, contratos, cobranças e repasses em um só lugar. Para imobiliárias e proprietários." />
-            </Head>
+            <SeoHead
+                title="Kimobe — Gestão de Aluguéis Simplificada"
+                description="Administre imóveis, contratos, cobranças e repasses em um só lugar. Plataforma SaaS para imobiliárias e proprietários gerenciarem aluguéis com simplicidade."
+            >
+                <JsonLd
+                    data={{
+                        '@context': 'https://schema.org',
+                        '@type': 'SoftwareApplication',
+                        name: 'Kimobe',
+                        applicationCategory: 'BusinessApplication',
+                        operatingSystem: 'Web',
+                        description:
+                            'Plataforma SaaS de gestão de aluguéis para imobiliárias e proprietários. Imóveis, contratos, cobranças, repasses e fiadores em um só lugar.',
+                        offers: {
+                            '@type': 'AggregateOffer',
+                            priceCurrency: 'BRL',
+                            lowPrice: planos.length ? Number(planos[0].valor_mensal).toFixed(2) : '49.90',
+                            offerCount: planos.length || 4,
+                        },
+                        inLanguage: 'pt-BR',
+                    }}
+                />
+            </SeoHead>
 
             {/* Hero */}
             <section className="relative flex min-h-[90vh] items-center bg-[#0A4F5C] px-4 pt-16">
