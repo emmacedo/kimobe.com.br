@@ -215,7 +215,8 @@ test('admin sem 2fa não pode acessar rotas protegidas', function () {
     $admin = AdminUser::factory()->create();
     $this->actingAs($admin, 'admin');
 
-    $response = $this->get('/admin/planos');
+    // /admin/planos foi descontinuada (catálogo agora é FullFlow); usar rota de assinantes que segue a mesma proteção 2FA.
+    $response = $this->get('/admin/assinantes');
     $response->assertRedirect('/admin/minha-conta');
 });
 

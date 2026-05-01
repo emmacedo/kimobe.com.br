@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Tenant;
+use App\Models\User;
+use App\Models\Vinculo;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /*
@@ -14,7 +18,7 @@ use Tests\TestCase;
 */
 
 pest()->extend(TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature');
 
 /*
@@ -45,14 +49,18 @@ expect()->extend('toBeOne', function () {
 
 /**
  * Cria um usuário com vínculo ativo em um tenant.
- * Retorna o usuário já com sessão de tenant configurada.
+ * Tenant é criado isento de assinatura por padrão para passar pelo
+ * middleware subscription.active sem precisar de FullFlowSubscription real.
  */
-function createUserWithTenant(array $userAttributes = [], string $papel = 'admin'): App\Models\User
+function createUserWithTenant(array $userAttributes = [], string $papel = 'admin', array $tenantAttributes = []): User
 {
-    $user = App\Models\User::factory()->create($userAttributes);
-    $tenant = App\Models\Tenant::factory()->create();
+    $user = User::factory()->create($userAttributes);
+    $tenant = Tenant::factory()->create([
+        'is_exempt_from_subscription' => true,
+        ...$tenantAttributes,
+    ]);
 
-    App\Models\Vinculo::create([
+    Vinculo::create([
         'user_id' => $user->id,
         'tenant_id' => $tenant->id,
         'papel' => $papel,
