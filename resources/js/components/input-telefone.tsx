@@ -28,7 +28,7 @@ export function InputTelefone({ value, onChange, className, placeholder = '(00) 
 
     return (
         <Input
-            value={value}
+            value={mascaraTelefone(value)}
             onChange={handleChange}
             placeholder={placeholder}
             maxLength={15}
