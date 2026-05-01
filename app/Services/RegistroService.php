@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\AdminUser;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Vinculo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Kicol\FullFlow\Models\FullFlowPlan;
 
 class RegistroService
 {
@@ -36,12 +38,17 @@ class RegistroService
                 ? $dados['cnpj']
                 : $dados['cpf'];
 
+            $tipoDocumento = ($dados['tipo_tenant'] === 'imobiliaria' || ! empty($dados['cnpj'])) ? 'cnpj' : 'cpf';
+
             $tenant = Tenant::create([
                 'nome' => $dados['nome_tenant'],
+                'legal_name' => $dados['legal_name'] ?? null,
                 'tipo' => $dados['tipo_tenant'],
+                'tipo_documento' => $tipoDocumento,
                 'documento' => $documento,
-                'plano_id' => $dados['plano_id'],
+                'state_registration' => $dados['state_registration'] ?? null,
                 'status' => 'ativo',
+                'auto_upgrade_enabled' => true,
             ]);
 
             // 3. Criar vínculo admin
@@ -70,22 +77,25 @@ class RegistroService
 
             // 6. Enviar emails de notificação
             $emailService = app(EmailNotificationService::class);
-            $plano = \App\Models\Plano::find($dados['plano_id']);
+            $planoCode = $dados['plan_code'] ?? null;
+            $planoNome = $planoCode
+                ? (FullFlowPlan::where('code', $planoCode)->value('name') ?? $planoCode)
+                : 'A definir';
 
             // Boas-vindas ao novo assinante
             $emailService->enviar('kimobe.boas_vindas', $user->email, $user->name, [
                 'nome' => $user->name, 'email' => $user->email,
-                'nome_empresa' => $tenant->nome, 'plano_nome' => $plano?->nome ?? 'N/A',
+                'nome_empresa' => $tenant->nome, 'plano_nome' => $planoNome,
                 'link_sistema' => url('/dashboard'),
             ], $tenant->id);
 
             // Notificar super admin
-            $adminEmail = \App\Models\AdminUser::first();
+            $adminEmail = AdminUser::first();
             if ($adminEmail) {
                 $emailService->enviar('kimobe.novo_cadastro_admin', $adminEmail->email, $adminEmail->nome, [
                     'nome' => $user->name, 'email' => $user->email,
                     'nome_empresa' => $tenant->nome, 'tipo_tenant' => $tenant->tipo,
-                    'plano_nome' => $plano?->nome ?? 'N/A', 'documento' => $tenant->documento,
+                    'plano_nome' => $planoNome, 'documento' => $tenant->documento,
                 ]);
             }
 

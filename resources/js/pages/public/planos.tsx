@@ -5,7 +5,8 @@ import { PlanoCard } from '@/components/public/plano-card';
 import { SectionTitle } from '@/components/public/section-title';
 import { SeoHead } from '@/components/seo-head';
 
-type PlanoData = { id: number; nome: string; descricao: string | null; limite_imoveis: number; valor_mensal: string; ordem: number };
+import type { PlanoData } from '@/components/public/plano-card';
+
 type Props = { planos: PlanoData[] };
 
 const faqs = [
@@ -29,29 +30,35 @@ export default function PlanosPage({ planos }: Props) {
                         '@context': 'https://schema.org',
                         '@type': 'ItemList',
                         name: 'Planos Kimobe',
-                        itemListElement: planos.map((plano, idx) => ({
-                            '@type': 'ListItem',
-                            position: idx + 1,
-                            item: {
-                                '@type': 'Product',
-                                name: `Kimobe ${plano.nome}`,
-                                description: plano.descricao ?? `Plano ${plano.nome} — até ${plano.limite_imoveis} imóveis administrados.`,
-                                brand: { '@type': 'Brand', name: 'Kimobe' },
-                                offers: {
-                                    '@type': 'Offer',
-                                    price: Number(plano.valor_mensal).toFixed(2),
-                                    priceCurrency: 'BRL',
-                                    availability: 'https://schema.org/InStock',
-                                    priceSpecification: {
-                                        '@type': 'UnitPriceSpecification',
-                                        price: Number(plano.valor_mensal).toFixed(2),
+                        itemListElement: planos.map((plano, idx) => {
+                            const limite = plano.modules?.find((m) => m.slug === 'imoveis')?.pivot?.quota_value ?? null;
+
+                            return {
+                                '@type': 'ListItem',
+                                position: idx + 1,
+                                item: {
+                                    '@type': 'Product',
+                                    name: `Kimobe ${plano.name}`,
+                                    description:
+                                        plano.description ??
+                                        `Plano ${plano.name}${limite ? ` — até ${limite} imóveis administrados` : ''}.`,
+                                    brand: { '@type': 'Brand', name: 'Kimobe' },
+                                    offers: {
+                                        '@type': 'Offer',
+                                        price: Number(plano.amount).toFixed(2),
                                         priceCurrency: 'BRL',
-                                        unitCode: 'MON',
-                                        billingDuration: 1,
+                                        availability: 'https://schema.org/InStock',
+                                        priceSpecification: {
+                                            '@type': 'UnitPriceSpecification',
+                                            price: Number(plano.amount).toFixed(2),
+                                            priceCurrency: 'BRL',
+                                            unitCode: 'MON',
+                                            billingDuration: 1,
+                                        },
                                     },
                                 },
-                            },
-                        })),
+                            };
+                        }),
                     }}
                 />
             </SeoHead>
@@ -67,7 +74,7 @@ export default function PlanosPage({ planos }: Props) {
                 <div className="mx-auto max-w-6xl">
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                         {planos.map((p, i) => (
-                            <PlanoCard key={p.id} plano={p} destaque={i === 1} detalhado />
+                            <PlanoCard key={p.code} plano={p} destaque={i === 1} detalhado />
                         ))}
                     </div>
                 </div>

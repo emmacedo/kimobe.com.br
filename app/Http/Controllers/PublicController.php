@@ -3,22 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\MensagemContato;
-use App\Models\Plano;
 use App\Support\Sanitize;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
+use Kicol\FullFlow\Models\FullFlowPlan;
 
 class PublicController extends Controller
 {
     /**
      * TTL do cache de planos públicos (10 minutos). Páginas anônimas servem
      * a mesma listagem para todos os visitantes; cache reduz pressão no DB.
-     * Invalidar via PlanoObserver quando admin altera/cria/remove plano.
+     * Invalidação automática quando o catálogo central FullFlow é
+     * sincronizado (fullflow:catalog-sync).
      */
-    private const PLANOS_CACHE_KEY = 'public.planos.ativos_ordenados';
+    private const PLANOS_CACHE_KEY = 'public.planos.fullflow_v1';
 
     private const PLANOS_CACHE_TTL = 600;
 
@@ -44,9 +45,13 @@ class PublicController extends Controller
         return Cache::remember(
             self::PLANOS_CACHE_KEY,
             self::PLANOS_CACHE_TTL,
-            // Cachear o array (não a Collection) evita corrupção de
-            // serialização ao deserializar entre workers FPM com OPcache.
-            fn () => Plano::ativo()->ordenado()->get()->toArray(),
+            // Cachear array (não Collection) — evita __PHP_Incomplete_Class na
+            // desserialização entre workers FPM (regra herdada do eBookView).
+            fn () => FullFlowPlan::with('modules')
+                ->orderBy('sort_order')
+                ->orderBy('amount')
+                ->get()
+                ->toArray(),
         );
     }
 

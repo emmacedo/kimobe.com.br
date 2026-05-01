@@ -1,218 +1,261 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
+import { PlanoCard } from '@/components/public/plano-card';
+import type { PlanoData } from '@/components/public/plano-card';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
-import { Spinner } from '@/components/ui/spinner';
-import {
-    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import KimobeLayout from '@/layouts/app/kimobe-layout';
 import { formataMoeda } from '@/lib/utils';
 
-type PlanoData = { id: number; nome: string; valor_mensal: string; limite_imoveis: number };
-type PlanoCard = PlanoData & { descricao: string | null };
-type FaturaData = { id: number; referencia: string; valor: string; data_vencimento: string; data_pagamento: string | null; status: string };
+type Subscription = {
+    fullflow_id: string;
+    plan_code: string | null;
+    status: string;
+    trial_until: string | null;
+    current_period_start: string | null;
+    current_period_end: string | null;
+    amount: string;
+    billing_cycle: string;
+};
+
+type Charge = {
+    valor: number;
+    tipo: string;
+    status: string;
+    vencimento: string;
+    pago_em?: string | null;
+    link_pagamento?: string | null;
+};
 
 type Props = {
-    plano: PlanoData | null;
+    plano_atual: PlanoData | null;
+    subscription: Subscription | null;
     cortesia: boolean;
     imoveis_count: number;
-    faturas: FaturaData[];
-    planos_ativos: PlanoCard[];
+    faturas: Charge[];
+    planos: PlanoData[];
 };
 
-const statusConfig: Record<string, { label: string; classes: string }> = {
-    pendente: { label: 'Pendente', classes: 'bg-[#FDF8E8] text-[#6B5420]' },
-    pago: { label: 'Pago', classes: 'bg-[#E7F7ED] text-[#1B6B3A]' },
-    atrasado: { label: 'Atrasado', classes: 'bg-[#FDECEC] text-[#A83232]' },
-    cancelado: { label: 'Cancelado', classes: 'bg-[#F7F8F7] text-[#6B7370]' },
+const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
+    trial: { bg: 'bg-[#FBF6E5]', text: 'text-[#5D4A0E]' },
+    ativa: { bg: 'bg-[#E5F5EC]', text: 'text-[#1B6B3A]' },
+    past_due: { bg: 'bg-[#FFF4E5]', text: 'text-[#7A4A0A]' },
+    suspensa: { bg: 'bg-[#FCE8E8]', text: 'text-[#5A1010]' },
+    cancelamento_agendado: { bg: 'bg-[#EEF0EF]', text: 'text-[#3A4240]' },
+    cancelada: { bg: 'bg-[#EEF0EF]', text: 'text-[#3A4240]' },
 };
 
-export default function PlanoPage({ plano, cortesia, imoveis_count, faturas, planos_ativos }: Props) {
-    const { errors, flash } = usePage().props as any;
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [planoSelecionado, setPlanoSelecionado] = useState<number | null>(null);
-    const [saving, setSaving] = useState(false);
+function formatDate(d: string | null) {
+    return d ? new Date(d).toLocaleDateString('pt-BR') : '—';
+}
 
-    useEffect(() => { if (flash?.success) toast.success(flash.success); }, [flash?.success]);
+function PlanoPage({ plano_atual, subscription, cortesia, imoveis_count, faturas, planos }: Props) {
+    const { errors } = usePage().props as { errors?: Record<string, string> };
+    const [acceptAutoUpgrade, setAcceptAutoUpgrade] = useState(false);
+    const [planoSelecionado, setPlanoSelecionado] = useState<string | null>(null);
+    const [processing, setProcessing] = useState(false);
 
-    // Barra de progresso: uso de imóveis
-    const limite = plano?.limite_imoveis ?? 0;
-    const ilimitado = limite === 0;
-    const usoPct = ilimitado ? 0 : Math.min((imoveis_count / limite) * 100, 100);
-    const usoCor = usoPct >= 100 ? '#A83232' : usoPct >= 80 ? '#C9A84C' : '#1B6B3A';
+    const limite = plano_atual?.modules?.find((m) => m.slug === 'imoveis')?.pivot?.quota_value ?? null;
+    const percentUso = limite ? Math.min(100, Math.round((imoveis_count / limite) * 100)) : 0;
+    const corBarra = percentUso >= 95 ? 'bg-[#A83232]' : percentUso >= 80 ? 'bg-[#C9A84C]' : 'bg-[#0A4F5C]';
 
-    // Próxima fatura pendente
-    const proximaFatura = faturas.find((f) => f.status === 'pendente');
-
-    function handleAlterarPlano() {
+    function subscribe() {
         if (!planoSelecionado) return;
-        setSaving(true);
-        router.post('/settings/plano', { plano_id: planoSelecionado }, {
-            onFinish: () => { setSaving(false); setDialogOpen(false); },
-            onError: () => setSaving(false),
-        });
+        setProcessing(true);
+        router.post(
+            '/settings/plano/contratar',
+            { plan_code: planoSelecionado, accept_auto_upgrade: acceptAutoUpgrade },
+            {
+                onFinish: () => setProcessing(false),
+                onSuccess: () => toast.success('Assinatura contratada!'),
+                onError: () => toast.error('Verifique os campos.'),
+            },
+        );
+    }
+
+    function changePlan(planCode: string) {
+        if (!confirm(`Confirmar mudança para o plano ${planCode}?`)) return;
+        setProcessing(true);
+        router.post(
+            '/settings/plano/mudar',
+            { plan_code: planCode },
+            {
+                onFinish: () => setProcessing(false),
+                onSuccess: () => toast.success('Plano alterado.'),
+                onError: () => toast.error('Não foi possível mudar o plano.'),
+            },
+        );
+    }
+
+    function cancelarAssinatura() {
+        const motivo = prompt('Por que você está cancelando? (opcional)');
+        if (motivo === null) return;
+        if (!confirm('Confirmar cancelamento da assinatura?')) return;
+        setProcessing(true);
+        router.post(
+            '/settings/plano/cancelar',
+            { motivo: motivo || '', confirmacao: true },
+            {
+                onFinish: () => setProcessing(false),
+                onSuccess: () => toast.success('Cancelamento processado.'),
+                onError: () => toast.error('Não foi possível cancelar.'),
+            },
+        );
     }
 
     return (
         <>
-            <Head title="Meu plano" />
+            <Head title="Meu plano — Kimobe" />
 
-            {/* Card plano atual */}
-            <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-medium text-[#1E2D30]">Plano atual</h2>
-                    {cortesia && <Badge className="bg-[#FDF8E8] text-[#6B5420]">Cortesia</Badge>}
-                </div>
+            <div className="space-y-5">
+                <h1 className="text-lg font-medium text-[#1E2D30]">Meu plano</h1>
 
-                {plano ? (
-                    <div className="mt-4">
-                        <h3 className="text-xl font-semibold text-[#0A4F5C]">{plano.nome}</h3>
-                        <div className="mt-1 flex items-baseline gap-1">
-                            {cortesia ? (
-                                <>
-                                    <span className="text-sm text-[#8A918E] line-through">{formataMoeda(plano.valor_mensal)}</span>
-                                    <span className="text-sm font-medium text-[#1B6B3A]">Isento</span>
-                                    <span className="text-xs text-[#8A918E]">/mês</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="text-2xl font-semibold tracking-tight text-[#1E2D30]">{formataMoeda(plano.valor_mensal)}</span>
-                                    <span className="text-sm text-[#8A918E]">/mês</span>
-                                </>
-                            )}
+                {cortesia && (
+                    <div className="rounded-[10px] border-l-4 border-[#1B6B3A] bg-[#E5F5EC] p-4 text-sm text-[#1B6B3A]">
+                        <p className="font-medium">Conta cortesia</p>
+                        <p className="text-xs">Sua conta está com acesso liberado sem cobrança.</p>
+                    </div>
+                )}
+
+                {subscription ? (
+                    <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
+                        <div className="mb-3 flex items-center justify-between">
+                            <p className="text-sm font-medium text-[#1E2D30]">Sua assinatura</p>
+                            <span className={`rounded-full px-2 py-0.5 text-xs ${(STATUS_BADGE[subscription.status] ?? STATUS_BADGE.cancelada).bg} ${(STATUS_BADGE[subscription.status] ?? STATUS_BADGE.cancelada).text}`}>
+                                {subscription.status}
+                            </span>
                         </div>
-
-                        {/* Barra de uso */}
-                        <div className="mt-4">
-                            <div className="flex items-center justify-between text-xs text-[#6B7370]">
-                                <span>Imóveis cadastrados</span>
-                                <span>{imoveis_count} de {ilimitado ? '∞' : limite}</span>
+                        <div className="grid gap-3 sm:grid-cols-2 text-sm">
+                            <div>
+                                <p className="text-xs uppercase tracking-wide text-[#8A918E]">Plano</p>
+                                <p className="font-medium text-[#1E2D30]">{plano_atual?.name ?? subscription.plan_code} — {formataMoeda(subscription.amount)} / {subscription.billing_cycle}</p>
                             </div>
-                            {!ilimitado && (
-                                <div className="mt-1.5 h-2 rounded-full bg-[#EEF0EF]">
-                                    <div className="h-full rounded-full transition-all" style={{ width: `${usoPct}%`, backgroundColor: usoCor }} />
+                            {subscription.trial_until && (
+                                <div>
+                                    <p className="text-xs uppercase tracking-wide text-[#8A918E]">Trial até</p>
+                                    <p>{formatDate(subscription.trial_until)}</p>
                                 </div>
                             )}
-                            <p className="mt-1 text-xs text-[#8A918E]">{ilimitado ? 'Imóveis ilimitados' : `Até ${limite} imóveis`}</p>
+                            {subscription.current_period_end && (
+                                <div>
+                                    <p className="text-xs uppercase tracking-wide text-[#8A918E]">Período atual</p>
+                                    <p>{formatDate(subscription.current_period_start)} → {formatDate(subscription.current_period_end)}</p>
+                                </div>
+                            )}
                         </div>
 
-                        {cortesia && (
-                            <p className="mt-3 text-xs text-[#6B5420] bg-[#FDF8E8] rounded-lg px-3 py-2">Sua conta é isenta de cobrança.</p>
+                        {limite !== null && (
+                            <div className="mt-4 rounded-md bg-[#F7F8F7] p-3">
+                                <div className="mb-1 flex items-center justify-between text-xs">
+                                    <span className="text-[#6B7370]">Imóveis cadastrados</span>
+                                    <span className="font-medium text-[#1E2D30]">{imoveis_count} / {limite}</span>
+                                </div>
+                                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white">
+                                    <div className={`h-full rounded-full ${corBarra}`} style={{ width: `${percentUso}%` }} />
+                                </div>
+                                {percentUso >= 80 && (
+                                    <p className="mt-1 text-xs font-medium text-[#7A4A0A]">{percentUso}% do limite usado</p>
+                                )}
+                            </div>
                         )}
 
-                        <div className="mt-4">
-                            <Button variant="outline" size="sm" className="border-[#D8DCDA]" onClick={() => { setPlanoSelecionado(null); setDialogOpen(true); }}>
-                                Alterar plano
-                            </Button>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {['trial', 'ativa', 'past_due', 'suspensa'].includes(subscription.status) && (
+                                <Button variant="outline" size="sm" onClick={cancelarAssinatura} disabled={processing} className="border-[#D8DCDA] text-[#A83232]">
+                                    Cancelar assinatura
+                                </Button>
+                            )}
                         </div>
                     </div>
                 ) : (
-                    <p className="mt-2 text-sm text-[#8A918E]">Nenhum plano associado.</p>
+                    !cortesia && (
+                        <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
+                            <p className="mb-4 text-sm font-medium text-[#1E2D30]">Você ainda não tem uma assinatura ativa.</p>
+                            <p className="text-sm text-[#6B7370]">Escolha um plano abaixo para começar.</p>
+                        </div>
+                    )
                 )}
-            </div>
 
-            {/* Card próxima fatura */}
-            {!cortesia && proximaFatura && (
-                <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
-                    <h2 className="mb-3 text-sm font-medium text-[#1E2D30]">Próxima fatura</h2>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-lg font-semibold text-[#1E2D30]">{formataMoeda(proximaFatura.valor)}</p>
-                            <p className="text-xs text-[#6B7370]">Vencimento: {proximaFatura.data_vencimento}</p>
-                        </div>
-                        <Badge className={statusConfig[proximaFatura.status]?.classes ?? 'bg-[#F7F8F7] text-[#6B7370]'}>
-                            {statusConfig[proximaFatura.status]?.label ?? proximaFatura.status}
-                        </Badge>
-                    </div>
-                </div>
-            )}
-
-            {/* Card faturas */}
-            <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
-                <h2 className="mb-3 text-sm font-medium text-[#1E2D30]">Faturas</h2>
-                {cortesia ? (
-                    <p className="text-sm text-[#8A918E]">Sua conta é isenta de cobrança. Nenhuma fatura é gerada.</p>
-                ) : faturas.length === 0 ? (
-                    <p className="text-sm text-[#8A918E]">Nenhuma fatura gerada ainda.</p>
-                ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-[#F7F8F7] hover:bg-[#F7F8F7]">
-                                <TableHead className="text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Referência</TableHead>
-                                <TableHead className="text-right text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Valor</TableHead>
-                                <TableHead className="text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Vencimento</TableHead>
-                                <TableHead className="text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Pagamento</TableHead>
-                                <TableHead className="text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {faturas.map((f) => (
-                                <TableRow key={f.id} className="border-b border-[#F7F8F7]">
-                                    <TableCell className="text-sm font-mono text-[#1E2D30]">{f.referencia}</TableCell>
-                                    <TableCell className="text-right text-sm font-mono">{formataMoeda(f.valor)}</TableCell>
-                                    <TableCell className="text-xs text-[#6B7370]">{f.data_vencimento}</TableCell>
-                                    <TableCell className="text-xs text-[#6B7370]">{f.data_pagamento ?? '—'}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary" className={statusConfig[f.status]?.classes ?? ''}>
-                                            {statusConfig[f.status]?.label ?? f.status}
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
+                {!cortesia && planos.length > 0 && (
+                    <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
+                        <p className="mb-4 text-sm font-medium text-[#1E2D30]">{subscription ? 'Mudar de plano' : 'Escolha seu plano'}</p>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {planos.map((p, i) => (
+                                <PlanoCard
+                                    key={p.code}
+                                    plano={p}
+                                    destaque={i === 1}
+                                    detalhado
+                                    selecionavel={!subscription}
+                                    selecionado={planoSelecionado === p.code}
+                                    onSelect={!subscription ? () => setPlanoSelecionado(p.code) : undefined}
+                                />
                             ))}
-                        </TableBody>
-                    </Table>
+                        </div>
+
+                        {subscription ? (
+                            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                                {planos
+                                    .filter((p) => p.code !== subscription.plan_code)
+                                    .map((p) => (
+                                        <Button
+                                            key={p.code}
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => changePlan(p.code)}
+                                            disabled={processing}
+                                            className="border-[#D8DCDA]"
+                                        >
+                                            Mudar para {p.name}
+                                        </Button>
+                                    ))}
+                            </div>
+                        ) : (
+                            <div className="mt-4 space-y-3">
+                                <label className="flex items-start gap-2 rounded-lg border border-[#FBF6E5] bg-[#FBF6E5]/40 p-3 text-xs text-[#5D4A0E]">
+                                    <Checkbox checked={acceptAutoUpgrade} onCheckedChange={(c) => setAcceptAutoUpgrade(!!c)} className="mt-0.5" />
+                                    <span>
+                                        Aceito que ao ultrapassar limites do plano, o Kimobe fará <strong>upgrade automático</strong> com cobrança proporcional. Posso desativar no perfil.
+                                    </span>
+                                </label>
+                                {errors?.accept_auto_upgrade && <p className="text-xs text-[#A83232]">{errors.accept_auto_upgrade}</p>}
+                                {errors?.plan_code && <p className="text-xs text-[#A83232]">{errors.plan_code}</p>}
+                                <Button onClick={subscribe} disabled={!planoSelecionado || !acceptAutoUpgrade || processing} className="bg-[#0A4F5C] text-white hover:bg-[#073B45]">
+                                    Contratar plano
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {faturas.length > 0 && (
+                    <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
+                        <p className="mb-4 text-sm font-medium text-[#1E2D30]">Faturas</p>
+                        <ul className="divide-y divide-[#EEF0EF]">
+                            {faturas.map((c, idx) => (
+                                <li key={idx} className="flex items-center justify-between py-3 text-sm">
+                                    <div>
+                                        <p className="font-medium text-[#1E2D30]">{formataMoeda(c.valor)} <span className="text-xs font-normal text-[#8A918E]">{c.tipo}</span></p>
+                                        <p className="text-xs text-[#6B7370]">
+                                            {c.pago_em ? `pago em ${formatDate(c.pago_em)}` : `vence em ${formatDate(c.vencimento)}`}
+                                        </p>
+                                    </div>
+                                    {c.link_pagamento && c.status !== 'paga' && (
+                                        <a href={c.link_pagamento} target="_blank" rel="noopener noreferrer" className="rounded-md bg-[#C9A84C] px-3 py-1.5 text-xs font-medium text-[#2E2410] hover:bg-[#B8993F]">
+                                            Pagar agora
+                                        </a>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 )}
             </div>
-
-            {/* Dialog alterar plano */}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader><DialogTitle>Alterar plano</DialogTitle></DialogHeader>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        {planos_ativos.map((p) => {
-                            const isAtual = p.id === plano?.id;
-                            const isSelecionado = p.id === planoSelecionado;
-                            // Verifica se downgrade é possível
-                            const limiteNovo = p.limite_imoveis;
-                            const downgradeBloqueado = limiteNovo > 0 && imoveis_count > limiteNovo;
-
-                            return (
-                                <button
-                                    key={p.id}
-                                    type="button"
-                                    disabled={isAtual || downgradeBloqueado}
-                                    onClick={() => setPlanoSelecionado(p.id)}
-                                    className={`relative rounded-xl border-2 p-4 text-left transition-all ${
-                                        isAtual ? 'border-[#D8DCDA] bg-[#F7F8F7] opacity-70 cursor-default'
-                                        : isSelecionado ? 'border-[#0A4F5C] bg-[#F0F7F8] shadow-md'
-                                        : downgradeBloqueado ? 'border-[#D8DCDA] opacity-50 cursor-not-allowed'
-                                        : 'border-[#D8DCDA] hover:border-[#8A918E] cursor-pointer'
-                                    }`}
-                                >
-                                    {isAtual && <Badge className="absolute -top-2 right-3 bg-[#0A4F5C] text-white text-[10px]">Atual</Badge>}
-                                    <h4 className="font-semibold text-[#1E2D30]">{p.nome}</h4>
-                                    <p className="mt-1 text-lg font-semibold tracking-tight text-[#0A4F5C]">{formataMoeda(p.valor_mensal)}<span className="text-xs font-normal text-[#8A918E]">/mês</span></p>
-                                    <p className="mt-1 text-xs text-[#6B7370]">{p.limite_imoveis === 0 ? 'Imóveis ilimitados' : `Até ${p.limite_imoveis} imóveis`}</p>
-                                    {downgradeBloqueado && (
-                                        <p className="mt-2 text-[10px] text-[#A83232]">Você tem {imoveis_count} imóveis. Reduza para no máximo {limiteNovo} antes do downgrade.</p>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    {errors?.plano_id && <p className="text-xs text-[#A83232]">{errors.plano_id}</p>}
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setDialogOpen(false)} className="border-[#D8DCDA]">Cancelar</Button>
-                        <Button onClick={handleAlterarPlano} disabled={saving || !planoSelecionado} className="bg-[#C9A84C] text-[#2E2410] hover:bg-[#B8993F]">
-                            {saving && <Spinner />}Confirmar alteração
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </>
     );
 }
+
+PlanoPage.layout = (page: React.ReactNode) => <KimobeLayout>{page}</KimobeLayout>;
+
+export default PlanoPage;

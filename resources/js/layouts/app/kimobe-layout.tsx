@@ -1,5 +1,5 @@
 import { Toaster } from 'sonner';
-import { BannerCobrancaKimobe } from '@/components/banner-cobranca-kimobe';
+import { FullFlowStatusBanner } from '@/components/fullflow-status-banner';
 import { CreditosKicol } from '@/components/creditos-kicol';
 import { KimobeContextBar } from '@/components/kimobe-context-bar';
 import { KimobeNavbar } from '@/components/kimobe-navbar';
@@ -13,7 +13,7 @@ export default function KimobeLayout({ children }: Props) {
         <div className="flex min-h-screen flex-col bg-[#EEF0EF]">
             <KimobeNavbar />
             <KimobeContextBar />
-            <BannerCobrancaKimobe />
+            <FullFlowStatusBanner />
             <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 md:px-6">
                 {children}
             </main>

@@ -10,8 +10,6 @@ type NavLink = { title: string; href: string; icon: React.ElementType };
 const navLinks: NavLink[] = [
     { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { title: 'Assinantes', href: '/admin/assinantes', icon: Building2 },
-    { title: 'Planos', href: '/admin/planos', icon: CreditCard },
-    { title: 'Faturamento', href: '/admin/faturamento', icon: Receipt },
     { title: 'Templates', href: '/admin/templates', icon: FileEdit },
     { title: 'Páginas', href: '/admin/paginas', icon: FileText },
     { title: 'Emails', href: '/admin/emails', icon: Send },

@@ -3,74 +3,58 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessarInadimplenciaKimobe;
-use App\Models\FaturaKimobe;
+use App\Models\FullFlowSubscription;
 use App\Models\Imovel;
 use App\Models\Tenant;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use Kicol\FullFlow\Models\FullFlowPlan;
 
+/**
+ * Dashboard admin do Kimobe — KPIs vêm do catálogo central FullFlow.
+ *
+ * Receita real é cobrança via Asaas (FullFlow), faturas internas
+ * (FaturaKimobe) foram descontinuadas. Para extratos financeiros use
+ * o painel do FullFlow.
+ */
 class AdminDashboardController extends Controller
 {
     public function index(): Response
     {
         $admin = Auth::guard('admin')->user();
-        $mesAtual = now()->format('m/Y');
-        $mesAnterior = now()->subMonth()->format('m/Y');
 
         $assinantesAtivos = Tenant::withoutGlobalScopes()->where('status', 'ativo')->count();
+        $cortesias = Tenant::withoutGlobalScopes()->where('is_exempt_from_subscription', true)->count();
 
-        $receitaMensal = FaturaKimobe::where('status', 'pago')
-            ->where('referencia', $mesAtual)->sum('valor');
-        $receitaAnterior = FaturaKimobe::where('status', 'pago')
-            ->where('referencia', $mesAnterior)->sum('valor');
-        $variacaoReceita = $receitaAnterior > 0
-            ? round((($receitaMensal - $receitaAnterior) / $receitaAnterior) * 100, 1) : 0;
-
-        $inadimplentes = FaturaKimobe::where('status', 'atrasado')->count();
-        $valorInadimplente = FaturaKimobe::where('status', 'atrasado')->sum('valor');
+        $assinaturasAtivas = FullFlowSubscription::whereIn('status', ['trial', 'ativa', 'past_due', 'cancelamento_agendado'])->count();
 
         $imoveisTotal = Imovel::withoutGlobalScopes()->count();
         $imoveisNovosMes = Imovel::withoutGlobalScopes()
-            ->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count();
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
 
-        $receita6meses = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $data = now()->subMonths($i);
-            $ref = $data->format('m/Y');
-            $receita6meses[] = [
-                'mes' => $data->format('M/Y'),
-                'valor' => (float) FaturaKimobe::where('status', 'pago')->where('referencia', $ref)->sum('valor'),
-            ];
-        }
+        $totalPlanos = FullFlowPlan::count();
 
-        $assinantesRecentes = Tenant::withoutGlobalScopes()->with('planoAssinatura')
-            ->orderBy('created_at', 'desc')->limit(5)->get();
-        $faturasPendentes = FaturaKimobe::with('tenant')
-            ->whereIn('status', ['pendente', 'atrasado'])->orderBy('data_vencimento')->limit(5)->get();
+        // Últimos assinantes com plano resolvido via plan_code (sem N+1)
+        $assinantesRecentes = Tenant::withoutGlobalScopes()
+            ->with('fullflowSubscription')
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get();
+        $planNamesByCode = FullFlowPlan::pluck('name', 'code')->all();
 
         return Inertia::render('admin/dashboard', [
             'admin' => $admin,
             'assinantes_ativos' => $assinantesAtivos,
-            'receita_mensal' => $receitaMensal,
-            'variacao_receita' => $variacaoReceita,
-            'inadimplentes' => $inadimplentes,
-            'valor_inadimplente' => $valorInadimplente,
+            'assinaturas_ativas' => $assinaturasAtivas,
+            'cortesias' => $cortesias,
             'imoveis_total' => $imoveisTotal,
             'imoveis_novos_mes' => $imoveisNovosMes,
-            'receita_6_meses' => $receita6meses,
+            'total_planos' => $totalPlanos,
             'assinantes_recentes' => $assinantesRecentes,
-            'faturas_pendentes' => $faturasPendentes,
+            'plan_names_by_code' => $planNamesByCode,
         ]);
-    }
-
-    public function executarInadimplencia(): JsonResponse
-    {
-        $job = new ProcessarInadimplenciaKimobe;
-        $job->handle();
-
-        return response()->json($job->resultado);
     }
 }

@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Models\Imovel;
-use App\Models\Plano;
+use App\Models\FullFlowSubscription;
 use App\Services\TenantService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Kicol\FullFlow\Exceptions\FullFlowException;
+use Kicol\FullFlow\Exceptions\SubscriptionAlreadyExistsException;
+use Kicol\FullFlow\Facades\FullFlow;
+use Kicol\FullFlow\Models\FullFlowPlan;
 
 /**
- * Gerencia visualização e alteração do plano do assinante.
+ * Gerencia visualização e alteração do plano do assinante (Tenant)
+ * via catálogo central FullFlow.
  */
 class SettingsPlanoController extends Controller
 {
@@ -21,82 +25,164 @@ class SettingsPlanoController extends Controller
     ) {}
 
     /**
-     * Página "Meu plano" — plano atual, uso, faturas.
+     * Página "Meu plano" — plano atual, uso e faturas (cobranças via FullFlow).
      */
     public function index(): Response
     {
         $tenant = $this->tenantService->getTenant();
-        $tenant->load('planoAssinatura');
+        $sub = $tenant->currentFullFlowSubscription();
+        $planoAtual = $tenant->currentFullFlowPlan();
 
-        // Contagem de imóveis do tenant
-        $imoveisCount = Imovel::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count();
+        $charges = [];
+        if ($sub) {
+            try {
+                $response = FullFlow::listCharges($sub->fullflow_id, 'todas');
+                $charges = $response['cobrancas'] ?? [];
+            } catch (\Throwable $e) {
+                report($e);
+                $charges = [];
+            }
+        }
 
-        // Faturas do Kimobe
-        $faturas = $tenant->faturasKimobe()
-            ->orderByDesc('referencia')
-            ->limit(20)
-            ->get()
-            ->map(fn ($f) => [
-                'id' => $f->id,
-                'referencia' => $f->referencia,
-                'valor' => $f->valor,
-                'data_vencimento' => $f->data_vencimento?->format('d/m/Y'),
-                'data_pagamento' => $f->data_pagamento?->format('d/m/Y'),
-                'status' => $f->status,
-            ]);
-
-        // Planos ativos para o dialog de alteração
-        $planosAtivos = Plano::where('status', 'ativo')->orderBy('ordem')->get()->map(fn ($p) => [
-            'id' => $p->id,
-            'nome' => $p->nome,
-            'descricao' => $p->descricao,
-            'limite_imoveis' => $p->limite_imoveis,
-            'valor_mensal' => $p->valor_mensal,
-        ]);
+        $planos = FullFlowPlan::with('modules')->orderBy('sort_order')->get();
 
         return Inertia::render('settings/plano', [
-            'plano' => $tenant->planoAssinatura ? [
-                'id' => $tenant->planoAssinatura->id,
-                'nome' => $tenant->planoAssinatura->nome,
-                'valor_mensal' => $tenant->planoAssinatura->valor_mensal,
-                'limite_imoveis' => $tenant->planoAssinatura->limite_imoveis,
-            ] : null,
-            'cortesia' => $tenant->estaCortesia(),
-            'imoveis_count' => $imoveisCount,
-            'faturas' => $faturas,
-            'planos_ativos' => $planosAtivos,
+            'plano_atual' => $planoAtual,
+            'subscription' => $sub,
+            'cortesia' => $tenant->estaIsento(),
+            'imoveis_count' => $tenant->totalImoveis(),
+            'faturas' => $charges,
+            'planos' => $planos,
         ]);
     }
 
     /**
-     * Altera o plano do tenant.
+     * Contrata o primeiro plano (cria FullFlowSubscription via API FullFlow).
      */
-    public function alterarPlano(Request $request): RedirectResponse
+    public function subscribe(Request $request): RedirectResponse
     {
         $request->validate([
-            'plano_id' => ['required', 'exists:planos,id'],
+            'plan_code' => ['required', 'string', 'exists:fullflow_plans,code'],
+            'accept_auto_upgrade' => ['accepted'],
+        ], [
+            'accept_auto_upgrade.accepted' => 'É necessário aceitar o termo de upgrade automático para contratar o plano.',
         ]);
 
         $tenant = $this->tenantService->getTenant();
-        $novoPlano = Plano::findOrFail($request->plano_id);
+        $plan = FullFlowPlan::where('code', $request->input('plan_code'))->firstOrFail();
 
-        // Verifica se o plano está ativo
-        if ($novoPlano->status !== 'ativo') {
-            return back()->withErrors(['plano_id' => 'Este plano não está disponível.']);
+        if (FullFlowSubscription::where('tenant_id', $tenant->id)->exists()) {
+            return back()->with('error', 'Você já tem uma assinatura ativa.');
         }
 
-        // Verifica se o downgrade é compatível com o uso atual
-        if ($novoPlano->limite_imoveis > 0) {
-            $imoveisCount = Imovel::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count();
-            if ($imoveisCount > $novoPlano->limite_imoveis) {
-                return back()->withErrors([
-                    'plano_id' => "Você possui {$imoveisCount} imóveis mas o plano permite apenas {$novoPlano->limite_imoveis}. Reduza a quantidade antes de fazer downgrade.",
-                ]);
-            }
+        $reference = "kimobe_tenant_{$tenant->id}";
+        $documento = preg_replace('/\D/', '', $tenant->documento ?? '');
+        $isCnpj = $tenant->tipo_documento === 'cnpj';
+
+        try {
+            $result = FullFlow::createSubscription([
+                'referencia_externa' => $reference,
+                'cliente' => [
+                    'tipo' => $isCnpj ? 'pj' : 'pf',
+                    'documento' => $documento,
+                    'nome' => $isCnpj ? ($tenant->legal_name ?: $tenant->nome) : $tenant->nome,
+                    'email' => $tenant->email_contato ?? $tenant->getAdminPrincipal()?->email,
+                    'telefone' => $tenant->telefone_comercial ?? $tenant->whatsapp,
+                ],
+                'assinatura' => [
+                    'plan_code' => $plan->code,
+                    'dia_vencimento' => 10,
+                ],
+                'fiscal' => [
+                    'emitir_nf' => false,
+                    'descricao_servico' => "Assinatura Kimobe — Plano {$plan->name}",
+                ],
+            ]);
+        } catch (SubscriptionAlreadyExistsException) {
+            return back()->with('error', 'Já existe assinatura no FullFlow para este tenant.');
+        } catch (FullFlowException $e) {
+            return back()->with('error', 'Erro ao contratar: '.$e->getMessage());
         }
 
-        $tenant->update(['plano_id' => $novoPlano->id]);
+        FullFlowSubscription::create([
+            'tenant_id' => $tenant->id,
+            'fullflow_id' => $result['assinatura_id'],
+            'reference' => $reference,
+            'plan_code' => $plan->code,
+            'status' => $result['status'],
+            'trial_until' => $result['trial_ate'] ?? null,
+            'amount' => $plan->amount,
+            'billing_cycle' => $plan->billing_cycle,
+        ]);
 
-        return back()->with('success', "Plano alterado para {$novoPlano->nome}!");
+        $tenant->update(['auto_upgrade_enabled' => true]);
+
+        return redirect()->route('settings.plano.index')
+            ->with('success', "Assinatura contratada! Trial até {$result['trial_ate']}.");
+    }
+
+    /**
+     * Mudança de plano (upgrade/downgrade) via API FullFlow.
+     */
+    public function changePlan(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'plan_code' => ['required', 'string', 'exists:fullflow_plans,code'],
+            'motivo' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $tenant = $this->tenantService->getTenant();
+        $sub = $tenant->currentFullFlowSubscription();
+        if (! $sub) {
+            return back()->with('error', 'Você não tem assinatura para alterar.');
+        }
+
+        $newPlan = FullFlowPlan::where('code', $request->input('plan_code'))->firstOrFail();
+        if ($sub->plan_code === $newPlan->code) {
+            return back()->with('error', 'Esse já é o seu plano atual.');
+        }
+
+        $isUpgrade = (float) $newPlan->amount > (float) $sub->amount;
+
+        try {
+            $result = $isUpgrade
+                ? FullFlow::upgradeSubscription($sub->fullflow_id, $newPlan->code, $request->input('motivo'))
+                : FullFlow::downgradeSubscription($sub->fullflow_id, $newPlan->code, $request->input('motivo'));
+        } catch (FullFlowException $e) {
+            return back()->with('error', 'Não foi possível mudar o plano: '.$e->getMessage());
+        }
+
+        $sub->update([
+            'plan_code' => $result['plan_code'] ?? ($result['plan_code_atual'] ?? $newPlan->code),
+            'amount' => $result['amount'] ?? $newPlan->amount,
+            'billing_cycle' => $newPlan->billing_cycle,
+            'last_synced_at' => now(),
+        ]);
+
+        return redirect()->route('settings.plano.index')->with('success', "Plano alterado para {$newPlan->name}.");
+    }
+
+    public function cancel(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'motivo' => ['nullable', 'string', 'max:500'],
+            'confirmacao' => ['accepted'],
+        ]);
+
+        $tenant = $this->tenantService->getTenant();
+        $sub = $tenant->currentFullFlowSubscription();
+        if (! $sub) {
+            return back()->with('error', 'Você não tem assinatura para cancelar.');
+        }
+
+        try {
+            $result = FullFlow::cancelSubscription($sub->fullflow_id, $request->input('motivo'));
+        } catch (FullFlowException $e) {
+            return back()->with('error', 'Erro ao cancelar: '.$e->getMessage());
+        }
+
+        $sub->update(['status' => $result['status'], 'last_synced_at' => now()]);
+
+        return redirect()->route('settings.plano.index')->with('success', 'Cancelamento processado.');
     }
 }

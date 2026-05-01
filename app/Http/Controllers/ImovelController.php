@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Concerns\EnsuresPlanCapacity;
 use App\Http\Requests\StoreImovelRequest;
 use App\Http\Requests\UpdateImovelRequest;
 use App\Models\Imovel;
@@ -15,7 +16,8 @@ use Inertia\Response;
 
 class ImovelController extends Controller
 {
-    use ScopesPorPapel;
+    use EnsuresPlanCapacity, ScopesPorPapel;
+
     /**
      * Listagem de imóveis com filtros, paginação e eager load.
      * O TenantScope já filtra automaticamente por tenant.
@@ -49,7 +51,7 @@ class ImovelController extends Controller
         }
 
         // Contagens por status (com mesmo scoping)
-        $contagemQuery = Imovel::query()->selectRaw("status, count(*) as total")->groupBy('status');
+        $contagemQuery = Imovel::query()->selectRaw('status, count(*) as total')->groupBy('status');
         $this->scopeImoveisDoUsuario($contagemQuery);
         $contagens = $contagemQuery->pluck('total', 'status');
 
@@ -80,13 +82,10 @@ class ImovelController extends Controller
      */
     public function store(StoreImovelRequest $request): RedirectResponse
     {
-        // Verificar limite do plano
-        $tenant = app(TenantService::class)->getTenant();
-        if ($tenant && ! $tenant->podeAdicionarImovel()) {
-            $limite = $tenant->planoAssinatura?->limite_imoveis ?? 0;
-            return back()->withErrors([
-                'limite' => "Você atingiu o limite de imóveis do seu plano ({$limite} imóveis). Faça upgrade para cadastrar mais.",
-            ]);
+        // Garante que o plano cobre — em caso de overage, AutoUpgradeService
+        // sobe automaticamente para o próximo plano da escada.
+        if ($redirect = $this->ensureTenantCapacity('imoveis', 1, 'cadastrar mais imóveis')) {
+            return $redirect;
         }
 
         $dados = $request->validated();

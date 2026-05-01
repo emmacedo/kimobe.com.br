@@ -7,7 +7,7 @@ import { SectionTitle } from '@/components/public/section-title';
 import { SeoHead } from '@/components/seo-head';
 import { formataMoeda } from '@/lib/utils';
 
-type PlanoData = { id: number; nome: string; descricao: string | null; limite_imoveis: number; valor_mensal: string; ordem: number };
+import type { PlanoData } from "@/components/public/plano-card";
 type Props = { planos: PlanoData[] };
 
 const features = [
@@ -44,7 +44,7 @@ export default function HomePage({ planos }: Props) {
                         offers: {
                             '@type': 'AggregateOffer',
                             priceCurrency: 'BRL',
-                            lowPrice: planos.length ? Number(planos[0].valor_mensal).toFixed(2) : '49.90',
+                            lowPrice: planos.length ? Number(planos[0].amount).toFixed(2) : '49.90',
                             offerCount: planos.length || 4,
                         },
                         inLanguage: 'pt-BR',
@@ -110,7 +110,7 @@ export default function HomePage({ planos }: Props) {
             <section className="bg-[#0A4F5C] px-4 py-16 md:py-20">
                 <div className="mx-auto grid max-w-5xl gap-8 sm:grid-cols-3 text-center">
                     {[
-                        { valor: `A partir de ${planos.length > 0 ? formataMoeda(planos[0].valor_mensal) : 'R$ 49,90'}`, label: 'Valor acessível por mês' },
+                        { valor: `A partir de ${planos.length > 0 ? formataMoeda(planos[0].amount) : 'R$ 49,90'}`, label: 'Valor acessível por mês' },
                         { valor: '100% online', label: 'Acesse de qualquer lugar' },
                         { valor: 'Múltiplos papéis', label: 'Admin, proprietário e inquilino' },
                     ].map((s) => (
@@ -128,7 +128,7 @@ export default function HomePage({ planos }: Props) {
                     <SectionTitle titulo="Planos para cada tamanho de negócio" />
                     <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                         {planos.map((p, i) => (
-                            <PlanoCard key={p.id} plano={p} destaque={i === 1} />
+                            <PlanoCard key={p.code} plano={p} destaque={i === 1} />
                         ))}
                     </div>
                     <div className="mt-8 text-center">
