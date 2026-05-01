@@ -24,6 +24,7 @@ export type ImovelFormData = {
     bairro: string;
     cidade: string;
     uf: string;
+    inscricao_iptu: string;
     tipo: string;
     status: string;
     quartos: number | null;
@@ -180,6 +181,23 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                             />
                             <InputError message={errors.uf} />
                         </div>
+                    </div>
+
+                    {/* Inscrição IPTU */}
+                    <div>
+                        <Label htmlFor="inscricao_iptu">
+                            Inscrição do IPTU{' '}
+                            <span className="text-[#8A918E]">(opcional)</span>
+                        </Label>
+                        <Input
+                            id="inscricao_iptu"
+                            value={form.inscricao_iptu}
+                            onChange={(e) => setField('inscricao_iptu', e.target.value)}
+                            placeholder="Número de inscrição imobiliária"
+                            maxLength={50}
+                            className="bg-white border-[#D8DCDA]"
+                        />
+                        <InputError message={errors.inscricao_iptu} />
                     </div>
                 </div>
             </div>

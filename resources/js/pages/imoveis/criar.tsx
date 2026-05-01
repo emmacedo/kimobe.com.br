@@ -15,6 +15,7 @@ const dadosIniciais: ImovelFormData = {
     bairro: '',
     cidade: '',
     uf: '',
+    inscricao_iptu: '',
     tipo: '',
     status: 'disponivel',
     quartos: null,

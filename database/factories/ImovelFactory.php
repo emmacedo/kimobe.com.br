@@ -48,6 +48,7 @@ class ImovelFactory extends Factory
             'bairro' => $endereco['bairro'],
             'cidade' => $endereco['cidade'],
             'uf' => $endereco['uf'],
+            'inscricao_iptu' => $this->faker->optional(0.5)->numerify('###############'),
             'tipo' => $tipo,
             'status' => $this->faker->randomElement(
                 // 70% alugado, 30% outros
@@ -70,9 +71,9 @@ class ImovelFactory extends Factory
     private function gerarComplemento(string $tipo): ?string
     {
         return match ($tipo) {
-            'apartamento' => 'Apt ' . $this->faker->numberBetween(101, 2504),
-            'sala' => 'Sala ' . $this->faker->numberBetween(101, 1510),
-            'loja' => 'Loja ' . $this->faker->numberBetween(1, 30),
+            'apartamento' => 'Apt '.$this->faker->numberBetween(101, 2504),
+            'sala' => 'Sala '.$this->faker->numberBetween(101, 1510),
+            'loja' => 'Loja '.$this->faker->numberBetween(1, 30),
             default => null,
         };
     }

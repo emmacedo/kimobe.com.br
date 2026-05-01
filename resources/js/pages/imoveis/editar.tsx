@@ -19,6 +19,7 @@ type ImovelData = {
     bairro: string;
     cidade: string;
     uf: string;
+    inscricao_iptu: string | null;
     tipo: string;
     status: string;
     quartos: number | null;
@@ -57,6 +58,7 @@ export default function EditarImovel({ imovel, proprietariosDisponiveis = [], er
         bairro: imovel.bairro,
         cidade: imovel.cidade,
         uf: imovel.uf,
+        inscricao_iptu: imovel.inscricao_iptu ?? '',
         tipo: imovel.tipo,
         status: imovel.status,
         quartos: imovel.quartos,

@@ -10,9 +10,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 #[Fillable([
     'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf',
+    'inscricao_iptu',
     'tipo', 'status', 'quartos', 'suites', 'banheiros', 'vagas_garagem',
     'andar', 'area_m2', 'valor_aluguel_sugerido', 'observacoes',
 ])]
@@ -76,7 +78,7 @@ class Imovel extends Model
     /**
      * Retorna titulares com email/nome para envio de notificações.
      */
-    public function getTitularesParaNotificacao(): \Illuminate\Support\Collection
+    public function getTitularesParaNotificacao(): Collection
     {
         return $this->titularidades()
             ->with('vinculo.user')

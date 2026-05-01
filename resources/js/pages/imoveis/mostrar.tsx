@@ -73,6 +73,7 @@ type ImovelData = {
     bairro: string;
     cidade: string;
     uf: string;
+    inscricao_iptu: string | null;
     tipo: string;
     status: string;
     quartos: number | null;
@@ -190,6 +191,14 @@ export default function MostrarImovel({ imovel }: Props) {
                             </div>
                             <p className="text-sm font-medium text-[#1E2D30]">{enderecoCompleto}</p>
                             <p className="mt-1 text-sm text-[#6B7370]">{cidadeUfCep}</p>
+                            {imovel.inscricao_iptu && (
+                                <p className="mt-1 text-xs text-[#6B7370]">
+                                    Inscrição do IPTU:{' '}
+                                    <span className="font-medium text-[#1E2D30]">
+                                        {imovel.inscricao_iptu}
+                                    </span>
+                                </p>
+                            )}
                             <a
                                 href={googleMapsUrl}
                                 target="_blank"
