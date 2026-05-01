@@ -7,25 +7,42 @@ use App\Models\Plano;
 use App\Support\Sanitize;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PublicController extends Controller
 {
+    /**
+     * TTL do cache de planos públicos (10 minutos). Páginas anônimas servem
+     * a mesma listagem para todos os visitantes; cache reduz pressão no DB.
+     * Invalidar via PlanoObserver quando admin altera/cria/remove plano.
+     */
+    private const PLANOS_CACHE_KEY = 'public.planos.ativos_ordenados';
+
+    private const PLANOS_CACHE_TTL = 600;
+
     public function home(): Response|RedirectResponse
     {
         if (auth()->check()) {
             return redirect()->route('dashboard');
         }
 
-        $planos = Plano::ativo()->ordenado()->get();
-
-        return Inertia::render('public/home', ['planos' => $planos]);
+        return Inertia::render('public/home', ['planos' => $this->planosCacheados()]);
     }
 
     public function planos(): Response
     {
-        return Inertia::render('public/planos', ['planos' => Plano::ativo()->ordenado()->get()]);
+        return Inertia::render('public/planos', ['planos' => $this->planosCacheados()]);
+    }
+
+    private function planosCacheados()
+    {
+        return Cache::remember(
+            self::PLANOS_CACHE_KEY,
+            self::PLANOS_CACHE_TTL,
+            fn () => Plano::ativo()->ordenado()->get(),
+        );
     }
 
     public function faq(): Response
