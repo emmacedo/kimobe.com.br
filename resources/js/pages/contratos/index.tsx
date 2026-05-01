@@ -232,13 +232,17 @@ export default function ContratosIndex({ contratos, filtros }: Props) {
                         <EmptyState
                             icone={FileText}
                             titulo="Nenhum contrato cadastrado"
-                            descricao="Crie um contrato para começar a gerenciar aluguéis."
-                            acao={
-                                <Button className="bg-[#0A4F5C] text-white hover:bg-[#073B45]" size="sm">
-                                    <Plus className="mr-1 h-4 w-4" />
-                                    Criar primeiro contrato
+                            descricao={can.manage_contratos
+                                ? 'Crie um contrato para começar a gerenciar aluguéis.'
+                                : 'Você ainda não possui contratos vinculados.'}
+                            acao={can.manage_contratos ? (
+                                <Button className="bg-[#0A4F5C] text-white hover:bg-[#073B45]" size="sm" asChild>
+                                    <Link href="/contratos/criar">
+                                        <Plus className="mr-1 h-4 w-4" />
+                                        Criar primeiro contrato
+                                    </Link>
                                 </Button>
-                            }
+                            ) : undefined}
                         />
                     )
                 ) : (
