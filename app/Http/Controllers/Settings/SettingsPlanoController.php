@@ -117,7 +117,7 @@ class SettingsPlanoController extends Controller
 
         $tenant->update(['auto_upgrade_enabled' => true]);
 
-        return redirect()->route('settings.plano.index')
+        return redirect()->route('settings.plano')
             ->with('success', "Assinatura contratada! Trial até {$result['trial_ate']}.");
     }
 
@@ -159,7 +159,7 @@ class SettingsPlanoController extends Controller
             'last_synced_at' => now(),
         ]);
 
-        return redirect()->route('settings.plano.index')->with('success', "Plano alterado para {$newPlan->name}.");
+        return redirect()->route('settings.plano')->with('success', "Plano alterado para {$newPlan->name}.");
     }
 
     public function cancel(Request $request): RedirectResponse
@@ -183,6 +183,6 @@ class SettingsPlanoController extends Controller
 
         $sub->update(['status' => $result['status'], 'last_synced_at' => now()]);
 
-        return redirect()->route('settings.plano.index')->with('success', 'Cancelamento processado.');
+        return redirect()->route('settings.plano')->with('success', 'Cancelamento processado.');
     }
 }
