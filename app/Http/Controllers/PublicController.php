@@ -36,12 +36,17 @@ class PublicController extends Controller
         return Inertia::render('public/planos', ['planos' => $this->planosCacheados()]);
     }
 
-    private function planosCacheados()
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function planosCacheados(): array
     {
         return Cache::remember(
             self::PLANOS_CACHE_KEY,
             self::PLANOS_CACHE_TTL,
-            fn () => Plano::ativo()->ordenado()->get(),
+            // Cachear o array (não a Collection) evita corrupção de
+            // serialização ao deserializar entre workers FPM com OPcache.
+            fn () => Plano::ativo()->ordenado()->get()->toArray(),
         );
     }
 
