@@ -99,9 +99,9 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
             <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
                 <h2 className="mb-4 text-sm font-medium text-[#1E2D30]">Endereço</h2>
                 <div className="space-y-4">
-                    {/* CEP + Logradouro */}
-                    <div className="grid gap-4 sm:grid-cols-3">
-                        <div>
+                    {/* Linha 1 — CEP, Logradouro, Número, Complemento */}
+                    <div className="grid gap-4 sm:grid-cols-12">
+                        <div className="sm:col-span-2">
                             <Label htmlFor="cep">CEP</Label>
                             <InputCep
                                 value={form.cep}
@@ -110,7 +110,7 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                             />
                             <InputError message={errors.cep} />
                         </div>
-                        <div className="sm:col-span-2">
+                        <div className="sm:col-span-5">
                             <Label htmlFor="logradouro">Logradouro</Label>
                             <Input
                                 id="logradouro"
@@ -121,11 +121,7 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                             />
                             <InputError message={errors.logradouro} />
                         </div>
-                    </div>
-
-                    {/* Número + Complemento */}
-                    <div className="grid gap-4 sm:grid-cols-4">
-                        <div>
+                        <div className="sm:col-span-2">
                             <Label htmlFor="numero">Número</Label>
                             <Input
                                 id="numero"
@@ -143,16 +139,16 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                                 id="complemento"
                                 value={form.complemento}
                                 onChange={(e) => setField('complemento', e.target.value)}
-                                placeholder="Apt, sala, bloco... (opcional)"
+                                placeholder="Apt, sala, bloco..."
                                 className="bg-white border-[#D8DCDA]"
                             />
                             <InputError message={errors.complemento} />
                         </div>
                     </div>
 
-                    {/* Bairro + Cidade + UF */}
-                    <div className="grid gap-4 sm:grid-cols-3">
-                        <div>
+                    {/* Linha 2 — Bairro, Cidade, UF, Inscrição IPTU */}
+                    <div className="grid gap-4 sm:grid-cols-12">
+                        <div className="sm:col-span-3">
                             <Label htmlFor="bairro">Bairro</Label>
                             <Input
                                 id="bairro"
@@ -162,7 +158,7 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                             />
                             <InputError message={errors.bairro} />
                         </div>
-                        <div>
+                        <div className="sm:col-span-4">
                             <Label htmlFor="cidade">Cidade</Label>
                             <Input
                                 id="cidade"
@@ -172,7 +168,7 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                             />
                             <InputError message={errors.cidade} />
                         </div>
-                        <div>
+                        <div className="sm:col-span-2">
                             <Label>UF</Label>
                             <SelectUf
                                 value={form.uf}
@@ -181,23 +177,21 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                             />
                             <InputError message={errors.uf} />
                         </div>
-                    </div>
-
-                    {/* Inscrição IPTU */}
-                    <div>
-                        <Label htmlFor="inscricao_iptu">
-                            Inscrição do IPTU{' '}
-                            <span className="text-[#8A918E]">(opcional)</span>
-                        </Label>
-                        <Input
-                            id="inscricao_iptu"
-                            value={form.inscricao_iptu}
-                            onChange={(e) => setField('inscricao_iptu', e.target.value)}
-                            placeholder="Número de inscrição imobiliária"
-                            maxLength={50}
-                            className="bg-white border-[#D8DCDA]"
-                        />
-                        <InputError message={errors.inscricao_iptu} />
+                        <div className="sm:col-span-3">
+                            <Label htmlFor="inscricao_iptu">
+                                Inscrição do IPTU{' '}
+                                <span className="text-[#8A918E]">(opcional)</span>
+                            </Label>
+                            <Input
+                                id="inscricao_iptu"
+                                value={form.inscricao_iptu}
+                                onChange={(e) => setField('inscricao_iptu', e.target.value)}
+                                placeholder="Inscrição imobiliária"
+                                maxLength={50}
+                                className="bg-white border-[#D8DCDA]"
+                            />
+                            <InputError message={errors.inscricao_iptu} />
+                        </div>
                     </div>
                 </div>
             </div>
