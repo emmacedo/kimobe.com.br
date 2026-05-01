@@ -363,12 +363,22 @@ export default function ImoveisIndex({ imoveis, filtros, contagens, pode_adicion
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem asChild>
-                                                        <Link href={`/imoveis/${imovel.id}`}>Ver detalhes</Link>
+                                                        <Link
+                                                            href={`/imoveis/${imovel.id}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            Ver detalhes
+                                                        </Link>
                                                     </DropdownMenuItem>
                                                     {can.manage_imoveis && (
                                                         <>
                                                             <DropdownMenuItem asChild>
-                                                                <Link href={`/imoveis/${imovel.id}/editar`}>Editar</Link>
+                                                                <Link
+                                                                    href={`/imoveis/${imovel.id}/editar`}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    Editar
+                                                                </Link>
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem
