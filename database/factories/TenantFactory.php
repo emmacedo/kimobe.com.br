@@ -46,15 +46,24 @@ class TenantFactory extends Factory
                 ? $this->faker->randomElement(self::NOMES_IMOBILIARIAS)
                 : $this->faker->randomElement(self::NOMES_PROPRIETARIOS),
             'tipo' => $tipo,
+            'tipo_documento' => $tipo === 'imobiliaria' ? 'cnpj' : 'cpf',
             'documento' => $tipo === 'imobiliaria'
                 ? $this->gerarCnpj()
                 : $this->gerarCpf(),
-            'plano' => $this->faker->randomElement(['basico', 'profissional', 'enterprise']),
-            'status' => $this->faker->randomElement(
-                // 90% ativo, 10% suspenso/cancelado
-                array_merge(array_fill(0, 9, 'ativo'), ['suspenso', 'cancelado'])
-            ),
+            'is_exempt_from_subscription' => false,
+            'auto_upgrade_enabled' => true,
+            'status' => 'ativo',
         ];
+    }
+
+    public function suspenso(): self
+    {
+        return $this->state(fn () => ['status' => 'suspenso']);
+    }
+
+    public function cancelado(): self
+    {
+        return $this->state(fn () => ['status' => 'cancelado']);
     }
 
     /**

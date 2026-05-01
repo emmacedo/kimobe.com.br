@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "eae944f8a4b692d04d94eff193cf297a",
+    "content-hash": "cd210dff08e989a5e32c9620816165b2",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -1230,6 +1230,69 @@
                 "source": "https://github.com/inertiajs/inertia-laravel/tree/v3.0.1"
             },
             "time": "2026-03-25T21:07:46+00:00"
+        },
+        {
+            "name": "kicol/fullflow-client",
+            "version": "v0.4.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/emmacedo/fullflow-client.git",
+                "reference": "e98c567028db259981bc190ba61a451066844066"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/emmacedo/fullflow-client/zipball/e98c567028db259981bc190ba61a451066844066",
+                "reference": "e98c567028db259981bc190ba61a451066844066",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/console": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/events": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/http": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^8.0|^9.0",
+                "phpunit/phpunit": "^10.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Kicol\\FullFlow\\FullFlowServiceProvider"
+                    ],
+                    "aliases": {
+                        "FullFlow": "Kicol\\FullFlow\\Facades\\FullFlow"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Kicol\\FullFlow\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Kicol\\FullFlow\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "authors": [
+                {
+                    "name": "Eduardo Macedo",
+                    "email": "eduardo.macedo@kicol.com.br"
+                }
+            ],
+            "description": "Cliente PHP/Laravel para integrar SaaS Kicol com o FullFlow (Módulo de Assinaturas).",
+            "support": {
+                "source": "https://github.com/emmacedo/fullflow-client/tree/v0.4.0",
+                "issues": "https://github.com/emmacedo/fullflow-client/issues"
+            },
+            "time": "2026-05-01T12:04:42+00:00"
         },
         {
             "name": "laravel/fortify",

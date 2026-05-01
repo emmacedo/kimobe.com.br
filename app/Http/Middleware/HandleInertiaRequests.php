@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\ConfiguracaoCobrancaKimobe;
 use App\Services\TenantService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -122,65 +121,42 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Retorna alerta de fatura para banner in-app.
+     * Alerta de status da assinatura para banner in-app.
+     *
+     * Substitui o legado de FaturaKimobe pelo status da FullFlowSubscription:
+     *   - trial expirando        → nivel 1 (info)
+     *   - past_due (boletos)     → nivel 2 (atenção)
+     *   - suspensa               → nivel 3 (urgência, prestes a bloquear)
+     *   - cancelamento_agendado  → nivel 1 (info)
      */
     private function getAlertaFatura(Request $request): ?array
     {
         $tenantService = app(TenantService::class);
         $tenant = $tenantService->getTenant();
 
-        if (! $tenant || $tenant->cortesia) {
+        if (! $tenant || $tenant->is_exempt_from_subscription) {
             return null;
         }
 
-        $config = ConfiguracaoCobrancaKimobe::first();
-        if (! $config) {
+        $sub = $tenant->currentFullFlowSubscription();
+        if (! $sub) {
             return null;
         }
 
-        // Buscar fatura atrasada primeiro
-        $faturaAtrasada = $tenant->faturasKimobe()
-            ->where('status', 'atrasado')
-            ->orderBy('data_vencimento')
-            ->first();
-
-        if ($faturaAtrasada) {
-            $diasAtraso = (int) now()->diffInDays($faturaAtrasada->data_vencimento);
-            $diasParaBloqueio = max(0, $config->dias_graca_apos_vencimento - $diasAtraso);
-            $nivel = $diasParaBloqueio <= 2 ? 3 : 2;
-
-            return [
-                'nivel' => $nivel,
-                'referencia' => $faturaAtrasada->referencia,
-                'valor' => (float) $faturaAtrasada->valor,
-                'dias_atraso' => $diasAtraso,
-                'dias_para_bloqueio' => $diasParaBloqueio,
-                'mensagem' => $nivel === 3
-                    ? "ATENÇÃO: Sua fatura está vencida há {$diasAtraso} dias. O acesso será bloqueado em {$diasParaBloqueio} dia(s)."
-                    : "Sua fatura de {$faturaAtrasada->referencia} está vencida há {$diasAtraso} dias. Regularize para evitar o bloqueio.",
-            ];
-        }
-
-        // Fatura pendente próxima do vencimento
-        $faturaPendente = $tenant->faturasKimobe()
-            ->where('status', 'pendente')
-            ->where('data_vencimento', '<=', now()->addDays($config->dias_aviso_antes_vencimento))
-            ->orderBy('data_vencimento')
-            ->first();
-
-        if ($faturaPendente) {
-            $diasRestantes = (int) now()->diffInDays($faturaPendente->data_vencimento, false);
-
-            return [
+        return match ($sub->status) {
+            'past_due' => [
+                'nivel' => 2,
+                'mensagem' => 'Sua assinatura está com pagamento em atraso. Regularize para manter o acesso.',
+            ],
+            'suspensa' => [
+                'nivel' => 3,
+                'mensagem' => 'ATENÇÃO: Sua assinatura está suspensa. Regularize a cobrança para reativar o acesso.',
+            ],
+            'cancelamento_agendado' => [
                 'nivel' => 1,
-                'referencia' => $faturaPendente->referencia,
-                'valor' => (float) $faturaPendente->valor,
-                'dias_atraso' => 0,
-                'dias_para_bloqueio' => 0,
-                'mensagem' => "Sua fatura de {$faturaPendente->referencia} no valor de R$ ".number_format($faturaPendente->valor, 2, ',', '.')." vence em {$diasRestantes} dia(s).",
-            ];
-        }
-
-        return null;
+                'mensagem' => 'Cancelamento agendado'.($sub->current_period_end ? ' — acesso disponível até '.$sub->current_period_end->format('d/m/Y') : '').'.',
+            ],
+            default => null,
+        };
     }
 }

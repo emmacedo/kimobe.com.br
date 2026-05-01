@@ -6,14 +6,17 @@ use Database\Factories\TenantFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Kicol\FullFlow\Models\FullFlowPlan;
 
 #[Fillable([
-    'nome', 'tipo', 'documento', 'plano', 'status', 'plano_id',
-    'cortesia', 'motivo_cortesia', 'bloqueado_em', 'motivo_bloqueio',
+    'nome', 'legal_name', 'tipo', 'tipo_documento', 'documento', 'state_registration',
+    'status',
+    'is_exempt_from_subscription', 'motivo_isencao', 'auto_upgrade_enabled',
+    'bloqueado_em', 'motivo_bloqueio',
     'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf',
     'email_contato', 'telefone_comercial', 'whatsapp', 'site',
 ])]
@@ -22,18 +25,14 @@ class Tenant extends Model
     /** @use HasFactory<TenantFactory> */
     use HasFactory, SoftDeletes;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'tipo' => 'string',
-            'plano' => 'string',
+            'tipo_documento' => 'string',
             'status' => 'string',
-            'cortesia' => 'boolean',
+            'is_exempt_from_subscription' => 'boolean',
+            'auto_upgrade_enabled' => 'boolean',
             'bloqueado_em' => 'datetime',
         ];
     }
@@ -57,19 +56,11 @@ class Tenant extends Model
     }
 
     /**
-     * Plano de assinatura atual (tabela planos).
+     * Assinatura no catálogo central FullFlow (1:1 com Tenant).
      */
-    public function planoAssinatura(): BelongsTo
+    public function fullflowSubscription(): HasOne
     {
-        return $this->belongsTo(Plano::class, 'plano_id');
-    }
-
-    /**
-     * Faturas do Kimobe para este assinante.
-     */
-    public function faturasKimobe(): HasMany
-    {
-        return $this->hasMany(FaturaKimobe::class);
+        return $this->hasOne(FullFlowSubscription::class);
     }
 
     public function estaBloqueado(): bool
@@ -77,26 +68,9 @@ class Tenant extends Model
         return $this->status === 'bloqueado';
     }
 
-    public function estaCortesia(): bool
+    public function estaIsento(): bool
     {
-        return $this->cortesia === true;
-    }
-
-    public function estaInadimplente(): bool
-    {
-        return $this->faturasKimobe()->where('status', 'atrasado')->exists();
-    }
-
-    public function podeAdicionarImovel(): bool
-    {
-        $plano = $this->planoAssinatura;
-        if (! $plano || $plano->limite_imoveis === 0) {
-            return true;
-        }
-
-        return Imovel::withoutGlobalScopes()
-            ->where('tenant_id', $this->id)
-            ->count() < $plano->limite_imoveis;
+        return $this->is_exempt_from_subscription === true;
     }
 
     public function getAdminPrincipal(): ?User
@@ -118,5 +92,73 @@ class Tenant extends Model
             ->get()
             ->pluck('user.email')
             ->toArray();
+    }
+
+    // --- Helpers FullFlow (catálogo central) ---
+
+    public function currentFullFlowSubscription(): ?FullFlowSubscription
+    {
+        return FullFlowSubscription::where('tenant_id', $this->id)->first();
+    }
+
+    public function currentFullFlowPlan(): ?FullFlowPlan
+    {
+        $sub = $this->currentFullFlowSubscription();
+        if (! $sub || ! $sub->plan_code) {
+            return null;
+        }
+
+        return FullFlowPlan::where('code', $sub->plan_code)->first();
+    }
+
+    public function canAccessModule(string $slug): bool
+    {
+        if ($this->is_exempt_from_subscription) {
+            return true;
+        }
+
+        return (bool) $this->currentFullFlowSubscription()?->canAccess($slug);
+    }
+
+    public function getModuleQuota(string $slug): ?int
+    {
+        if ($this->is_exempt_from_subscription) {
+            return PHP_INT_MAX;
+        }
+
+        return $this->currentFullFlowSubscription()?->getQuota($slug);
+    }
+
+    /**
+     * Quota de imóveis disponível considerando o plano FullFlow vigente.
+     * Retorna true para tenants isentos ou enquanto há vagas;
+     * AutoUpgradeService cuida do upgrade automático na criação real.
+     */
+    public function podeAdicionarImovel(): bool
+    {
+        if ($this->is_exempt_from_subscription) {
+            return true;
+        }
+
+        $quota = $this->getModuleQuota('imoveis');
+        if ($quota === null) {
+            return false;
+        }
+
+        $atuais = Imovel::withoutGlobalScopes()
+            ->where('tenant_id', $this->id)
+            ->count();
+
+        return $atuais < $quota;
+    }
+
+    /**
+     * Total de imóveis ativos do tenant (uso atual da quota `imoveis`).
+     */
+    public function totalImoveis(): int
+    {
+        return Imovel::withoutGlobalScopes()
+            ->where('tenant_id', $this->id)
+            ->count();
     }
 }

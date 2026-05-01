@@ -5,11 +5,9 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminConfiguracaoController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminEmailLogController;
-use App\Http\Controllers\Admin\AdminFaturamentoController;
 use App\Http\Controllers\Admin\AdminMensagemController;
 use App\Http\Controllers\Admin\AdminMinhaContaController;
 use App\Http\Controllers\Admin\AdminPaginaController;
-use App\Http\Controllers\Admin\AdminPlanoController;
 use App\Http\Controllers\Admin\AdminTemplateController;
 use App\Http\Controllers\Admin\AdminTwoFactorChallengeController;
 use App\Http\Controllers\Admin\AdminUsuarioController;
@@ -34,12 +32,17 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\TenantSelectionController;
 use App\Http\Controllers\TitularidadeController;
 use Illuminate\Support\Facades\Route;
+use Kicol\FullFlow\Http\Controllers\FullFlowWebhookController;
 
 // Pixel de rastreamento de email (rota pública sem auth)
 Route::get('/email/pixel/{token}', [EmailTrackingController::class, 'pixel'])->name('email.pixel');
 
 // SEO — sitemap (rota pública sem auth)
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+
+// Webhook FullFlow (HMAC + idempotência tratados pelo controller do package)
+Route::post('/webhooks/fullflow', FullFlowWebhookController::class)
+    ->name('webhooks.fullflow');
 
 // Site público
 Route::get('/', [PublicController::class, 'home'])->name('home');
@@ -72,7 +75,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
 // ========================================================================
 // Rotas protegidas do app — auth + verified + tenant
 // ========================================================================
-Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo'])->group(function () {
+Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.active'])->group(function () {
 
     // Dashboard — todos os papéis
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -234,17 +237,9 @@ Route::prefix('admin')->group(function () {
         Route::middleware(['admin.require2fa'])->group(function () {
             Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
-            // Planos
-            Route::get('planos', [AdminPlanoController::class, 'index'])->name('admin.planos.index');
-            Route::post('planos', [AdminPlanoController::class, 'store'])->name('admin.planos.store');
-            Route::put('planos/{plano}', [AdminPlanoController::class, 'update'])->name('admin.planos.update');
-            Route::patch('planos/{plano}/toggle-status', [AdminPlanoController::class, 'toggleStatus'])->name('admin.planos.toggle-status');
-            Route::delete('planos/{plano}', [AdminPlanoController::class, 'destroy'])->name('admin.planos.destroy');
-
             // Assinantes
             Route::get('assinantes', [AdminAssinanteController::class, 'index'])->name('admin.assinantes.index');
             Route::get('assinantes/{tenant}', [AdminAssinanteController::class, 'show'])->name('admin.assinantes.show');
-            Route::patch('assinantes/{tenant}/plano', [AdminAssinanteController::class, 'alterarPlano'])->name('admin.assinantes.alterar-plano');
             Route::patch('assinantes/{tenant}/cortesia', [AdminAssinanteController::class, 'toggleCortesia'])->name('admin.assinantes.toggle-cortesia');
             Route::patch('assinantes/{tenant}/suspender', [AdminAssinanteController::class, 'suspender'])->name('admin.assinantes.suspender');
             Route::patch('assinantes/{tenant}/reativar', [AdminAssinanteController::class, 'reativar'])->name('admin.assinantes.reativar');
@@ -254,13 +249,6 @@ Route::prefix('admin')->group(function () {
             // Usuários da plataforma
             Route::get('usuarios', [AdminUsuarioController::class, 'index'])->name('admin.usuarios.index');
             Route::get('usuarios/{user}', [AdminUsuarioController::class, 'show'])->name('admin.usuarios.show');
-
-            // Faturamento
-            Route::get('faturamento', [AdminFaturamentoController::class, 'index'])->name('admin.faturamento.index');
-            Route::get('faturamento/preview', [AdminFaturamentoController::class, 'preview'])->name('admin.faturamento.preview');
-            Route::post('faturamento/gerar', [AdminFaturamentoController::class, 'gerar'])->name('admin.faturamento.gerar');
-            Route::patch('faturamento/{fatura}/pagamento', [AdminFaturamentoController::class, 'registrarPagamento'])->name('admin.faturamento.pagamento');
-            Route::patch('faturamento/{fatura}/cancelar', [AdminFaturamentoController::class, 'cancelar'])->name('admin.faturamento.cancelar');
 
             // Configurações
             Route::get('configuracoes', [AdminConfiguracaoController::class, 'index'])->name('admin.configuracoes.index');

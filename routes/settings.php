@@ -23,7 +23,9 @@ Route::middleware(['auth', 'verified', 'tenant'])->prefix('settings')->group(fun
     // Plano — apenas admin
     Route::middleware(['role:admin'])->group(function () {
         Route::get('plano', [SettingsPlanoController::class, 'index'])->name('settings.plano');
-        Route::post('plano', [SettingsPlanoController::class, 'alterarPlano'])->name('settings.plano.update');
+        Route::post('plano/contratar', [SettingsPlanoController::class, 'subscribe'])->name('settings.plano.subscribe');
+        Route::post('plano/mudar', [SettingsPlanoController::class, 'changePlan'])->name('settings.plano.change');
+        Route::post('plano/cancelar', [SettingsPlanoController::class, 'cancel'])->name('settings.plano.cancel');
     });
 
     // Segurança — todos os papéis

@@ -3,6 +3,7 @@
 use App\Http\Middleware\AdminAuthenticate;
 use App\Http\Middleware\AdminRequire2FA;
 use App\Http\Middleware\CheckTenantBloqueado;
+use App\Http\Middleware\EnsureFullFlowSubscriptionActive;
 use App\Http\Middleware\EnsureHasRole;
 use App\Http\Middleware\EnsureTenantSelected;
 use App\Http\Middleware\HandleAppearance;
@@ -22,6 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        // Webhook do FullFlow é assinado via HMAC; CSRF não se aplica.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/*',
+        ]);
+
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
@@ -32,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => EnsureTenantSelected::class,
             'tenant.ativo' => CheckTenantBloqueado::class,
+            'subscription.active' => EnsureFullFlowSubscriptionActive::class,
             'role' => EnsureHasRole::class,
             'admin.auth' => AdminAuthenticate::class,
             'admin.require2fa' => AdminRequire2FA::class,

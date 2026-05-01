@@ -2,30 +2,34 @@
 
 namespace App\Providers;
 
+use App\Listeners\SyncFullFlowSubscription;
 use App\Services\TenantService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Kicol\FullFlow\Events\SubscriptionActivated;
+use Kicol\FullFlow\Events\SubscriptionCancellationScheduled;
+use Kicol\FullFlow\Events\SubscriptionEnded;
+use Kicol\FullFlow\Events\SubscriptionPastDue;
+use Kicol\FullFlow\Events\SubscriptionPaymentReceived;
+use Kicol\FullFlow\Events\SubscriptionReactivated;
+use Kicol\FullFlow\Events\SubscriptionSuspended;
+use Kicol\FullFlow\Events\SubscriptionTrialStarted;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        // Singleton para manter o tenant ativo consistente durante toda a request
         $this->app->singleton(TenantService::class);
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->registerFullFlowListeners();
     }
 
     /**
@@ -48,5 +52,27 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /**
+     * Conecta o listener de sync à lista de eventos disparados pelo
+     * FullFlowWebhookController do package.
+     */
+    protected function registerFullFlowListeners(): void
+    {
+        $events = [
+            SubscriptionTrialStarted::class,
+            SubscriptionActivated::class,
+            SubscriptionPaymentReceived::class,
+            SubscriptionReactivated::class,
+            SubscriptionPastDue::class,
+            SubscriptionSuspended::class,
+            SubscriptionCancellationScheduled::class,
+            SubscriptionEnded::class,
+        ];
+
+        foreach ($events as $event) {
+            Event::listen($event, [SyncFullFlowSubscription::class, 'handle']);
+        }
     }
 }
