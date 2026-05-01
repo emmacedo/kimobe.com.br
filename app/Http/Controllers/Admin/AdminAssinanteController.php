@@ -31,8 +31,9 @@ class AdminAssinanteController extends Controller
             $query->where('status', $status);
         }
 
-        if ($planoCode = $request->input('plano_code')) {
-            $query->whereHas('fullflowSubscription', fn ($q) => $q->where('plan_code', $planoCode));
+        $planoFiltro = $request->input('plano_id') ?: $request->input('plano_code');
+        if ($planoFiltro) {
+            $query->whereHas('fullflowSubscription', fn ($q) => $q->where('plan_code', $planoFiltro));
         }
 
         if ($request->input('cortesia') === 'sim') {
@@ -43,8 +44,21 @@ class AdminAssinanteController extends Controller
 
         $assinantes = $query->orderBy('nome')->paginate(20)->withQueryString();
 
-        $assinantes->getCollection()->each(function ($tenant) {
+        $planosCatalogo = FullFlowPlan::with('modules')->get()->keyBy('code');
+
+        $assinantes->getCollection()->each(function ($tenant) use ($planosCatalogo) {
             $tenant->imoveis_count = Imovel::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count();
+            $tenant->cortesia = (bool) $tenant->is_exempt_from_subscription;
+            $tenant->motivo_cortesia = $tenant->motivo_isencao;
+
+            $planoCode = $tenant->fullflowSubscription?->plan_code;
+            $plano = $planoCode ? $planosCatalogo->get($planoCode) : null;
+            $quota = $plano?->modules->firstWhere('slug', 'imoveis')?->pivot?->quota_value;
+
+            $tenant->plano_assinatura = $plano ? [
+                'nome' => $plano->name,
+                'limite_imoveis' => $quota === null ? 0 : (int) $quota,
+            ] : null;
         });
 
         $resumo = [
@@ -54,7 +68,10 @@ class AdminAssinanteController extends Controller
             'cancelados' => Tenant::withoutGlobalScopes()->where('status', 'cancelado')->count(),
         ];
 
-        $planos = FullFlowPlan::orderBy('sort_order')->get(['code', 'name']);
+        $planos = FullFlowPlan::orderBy('sort_order')->get()->map(fn ($p) => [
+            'id' => $p->code,
+            'nome' => $p->name,
+        ]);
 
         return Inertia::render('admin/assinantes/index', [
             'assinantes' => $assinantes,
@@ -63,7 +80,7 @@ class AdminAssinanteController extends Controller
             'filtros' => [
                 'busca' => $request->input('busca', ''),
                 'status' => $request->input('status', ''),
-                'plano_code' => $request->input('plano_code', ''),
+                'plano_id' => $planoFiltro ?: '',
                 'cortesia' => $request->input('cortesia', ''),
             ],
         ]);
