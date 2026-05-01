@@ -24,12 +24,13 @@ class RegistroService
     public function registrar(array $dados): array
     {
         return DB::transaction(function () use ($dados) {
-            // 1. Criar user
+            // 1. Criar user (sempre PF na auto-inscrição — quem se cadastra é uma pessoa)
             $user = User::create([
                 'name' => $dados['nome'],
                 'email' => $dados['email'],
                 'telefone' => $dados['telefone'] ?? null,
-                'cpf' => $dados['cpf'] ?? null,
+                'tipo_pessoa' => 'pf',
+                'documento' => $dados['cpf'] ?? null,
                 'password' => Hash::make($dados['senha']),
             ]);
 

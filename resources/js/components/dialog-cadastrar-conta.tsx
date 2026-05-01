@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { getCsrfToken } from '@/lib/csrf';
 import type { DadosBancarios } from '@/types/models';
 
 type Props = {
@@ -41,22 +42,25 @@ const BANCOS = [
     { codigo: '748', nome: 'Sicredi' },
 ];
 
-function getCsrfToken(): string {
-    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
-}
+const initialState = {
+    apelido: '',
+    banco_codigo: '',
+    banco_nome: '',
+    agencia: '',
+    conta: '',
+    tipo_conta: 'corrente',
+    pix_tipo: '' as string,
+    pix_chave: '',
+};
 
 export function DialogCadastrarConta({ open, onOpenChange, vinculoId, onContaCriada }: Props) {
     const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState({
-        apelido: '',
-        banco_codigo: '',
-        banco_nome: '',
-        agencia: '',
-        conta: '',
-        tipo_conta: 'corrente',
-        pix_tipo: '' as string,
-        pix_chave: '',
-    });
+    const [form, setForm] = useState({ ...initialState });
+
+    // Reseta o form a cada abertura para evitar dados de uma criação anterior aparecerem.
+    useEffect(() => {
+        if (open) setForm({ ...initialState });
+    }, [open]);
 
     function handleBancoChange(codigo: string) {
         const banco = BANCOS.find((b) => b.codigo === codigo);
@@ -94,13 +98,7 @@ export function DialogCadastrarConta({ open, onOpenChange, vinculoId, onContaCri
 
             const conta: DadosBancarios = await response.json();
             onContaCriada(conta);
-
-            // Limpar form
-            setForm({
-                apelido: '', banco_codigo: '', banco_nome: '',
-                agencia: '', conta: '', tipo_conta: 'corrente',
-                pix_tipo: '', pix_chave: '',
-            });
+            setForm({ ...initialState });
         } catch {
             toast.error('Erro ao cadastrar conta.');
         } finally {

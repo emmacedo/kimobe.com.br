@@ -2,89 +2,53 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreTitularidadeRequest;
+use App\Http\Requests\UpdateTitularidadeRequest;
 use App\Models\Imovel;
+use App\Models\Scopes\TenantScope;
 use App\Models\Titularidade;
-use App\Models\Vinculo;
 use App\Services\TenantService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TitularidadeController extends Controller
 {
     /**
-     * Adiciona um titular ao imóvel.
-     * Valida unicidade do vínculo e soma de percentuais.
+     * Adiciona um titular ao imóvel. Validações de unicidade, soma de percentuais
+     * e conta bancária estão em StoreTitularidadeRequest. Comportamento radio:
+     * ao marcar como responsável, demove os demais titulares para 'observador'.
      */
-    public function store(Request $request, Imovel $imovel): JsonResponse
+    public function store(StoreTitularidadeRequest $request, Imovel $imovel): JsonResponse
     {
         $tenantId = app(TenantService::class)->getTenantId();
+        $dados = $request->validated();
 
-        $request->validate([
-            'vinculo_id' => ['required', 'integer'],
-            'tipo_titular' => ['required', 'in:pessoa_fisica,empresa,inventario'],
-            'papel' => ['required', 'in:responsavel,observador'],
-            'percentual' => ['required', 'numeric', 'min:0.01', 'max:100'],
-            'dados_bancarios_id' => ['nullable', 'integer'],
-        ], [
-            'vinculo_id.required' => 'Selecione o proprietário.',
-            'tipo_titular.required' => 'Selecione o tipo de titular.',
-            'papel.required' => 'Selecione o papel do titular.',
-            'percentual.required' => 'Informe o percentual de propriedade.',
-            'percentual.min' => 'O percentual deve ser maior que zero.',
-            'percentual.max' => 'O percentual não pode ultrapassar 100%.',
-        ]);
-
-        // Verificar que o vínculo é um proprietário do mesmo tenant
-        $vinculo = Vinculo::where('id', $request->vinculo_id)
-            ->where('tenant_id', $tenantId)
-            ->where('papel', 'proprietario')
-            ->first();
-
-        if (! $vinculo) {
-            return response()->json(['message' => 'Proprietário não encontrado.'], 422);
-        }
-
-        // Verificar unicidade: vínculo não pode já ser titular deste imóvel
-        $jaExiste = Titularidade::withoutGlobalScopes()
-            ->where('imovel_id', $imovel->id)
-            ->where('vinculo_id', $request->vinculo_id)
-            ->exists();
-
-        if ($jaExiste) {
-            return response()->json(['message' => 'Este proprietário já é titular deste imóvel.'], 422);
-        }
-
-        // Validar soma de percentuais
-        $somaAtual = Titularidade::withoutGlobalScopes()
-            ->where('imovel_id', $imovel->id)
-            ->sum('percentual');
-
-        if (($somaAtual + $request->percentual) > 100.005) { // margem para floating point
-            return response()->json([
-                'message' => 'A soma dos percentuais ultrapassaria 100%. Disponível: ' . number_format(100 - $somaAtual, 2) . '%.',
-            ], 422);
-        }
-
-        // Validar dados bancários pertencem ao vínculo
-        if ($request->dados_bancarios_id) {
-            $contaValida = $vinculo->dadosBancarios()
-                ->where('id', $request->dados_bancarios_id)
-                ->exists();
-
-            if (! $contaValida) {
-                return response()->json(['message' => 'Conta bancária inválida.'], 422);
+        $titularidade = DB::transaction(function () use ($imovel, $dados, $tenantId) {
+            if ($dados['papel'] === 'responsavel') {
+                $this->demoteOutrosResponsaveis($imovel->id);
             }
-        }
 
-        $titularidade = Titularidade::create([
-            'tenant_id' => $tenantId,
-            'imovel_id' => $imovel->id,
-            'vinculo_id' => $request->vinculo_id,
-            'tipo_titular' => $request->tipo_titular,
-            'papel' => $request->papel,
-            'percentual' => $request->percentual,
-            'dados_bancarios_id' => $request->dados_bancarios_id,
-        ]);
+            // Se há registro soft-deletado para este (imovel, vinculo), restaura em vez
+            // de criar novo — o unique index (imovel_id, vinculo_id) inclui linhas trashed.
+            $trashed = Titularidade::onlyTrashed()
+                ->withoutGlobalScopes([TenantScope::class])
+                ->where('imovel_id', $imovel->id)
+                ->where('vinculo_id', $dados['vinculo_id'])
+                ->first();
+
+            if ($trashed) {
+                $trashed->restore();
+                $trashed->update($dados);
+
+                return $trashed;
+            }
+
+            return Titularidade::create([
+                'tenant_id' => $tenantId,
+                'imovel_id' => $imovel->id,
+                ...$dados,
+            ]);
+        });
 
         $titularidade->load(['vinculo.user', 'dadosBancarios']);
 
@@ -92,36 +56,25 @@ class TitularidadeController extends Controller
     }
 
     /**
-     * Atualiza um titular do imóvel.
-     * Não permite trocar o proprietário (vinculo_id), apenas tipo, papel, percentual e conta.
+     * Atualiza um titular. Não permite trocar o proprietário (vinculo_id).
+     * Mantém comportamento radio.
      */
-    public function update(Request $request, Imovel $imovel, Titularidade $titularidade): JsonResponse
+    public function update(UpdateTitularidadeRequest $request, Imovel $imovel, Titularidade $titularidade): JsonResponse
     {
-        $request->validate([
-            'tipo_titular' => ['required', 'in:pessoa_fisica,empresa,inventario'],
-            'papel' => ['required', 'in:responsavel,observador'],
-            'percentual' => ['required', 'numeric', 'min:0.01', 'max:100'],
-            'dados_bancarios_id' => ['nullable', 'integer'],
-        ]);
+        // Garante que a titularidade pertence ao imóvel da URL (mitigação IDOR).
+        abort_unless($titularidade->imovel_id === $imovel->id, 404);
 
-        // Validar soma de percentuais (excluindo o percentual atual desta titularidade)
-        $somaOutros = Titularidade::withoutGlobalScopes()
-            ->where('imovel_id', $imovel->id)
-            ->where('id', '!=', $titularidade->id)
-            ->sum('percentual');
+        $dados = $request->validated();
 
-        if (($somaOutros + $request->percentual) > 100.005) {
-            return response()->json([
-                'message' => 'A soma dos percentuais ultrapassaria 100%. Disponível: ' . number_format(100 - $somaOutros, 2) . '%.',
-            ], 422);
-        }
+        $titularidade = DB::transaction(function () use ($imovel, $titularidade, $dados) {
+            if ($dados['papel'] === 'responsavel') {
+                $this->demoteOutrosResponsaveis($imovel->id, $titularidade->id);
+            }
 
-        $titularidade->update([
-            'tipo_titular' => $request->tipo_titular,
-            'papel' => $request->papel,
-            'percentual' => $request->percentual,
-            'dados_bancarios_id' => $request->dados_bancarios_id,
-        ]);
+            $titularidade->update($dados);
+
+            return $titularidade;
+        });
 
         $titularidade->load(['vinculo.user', 'dadosBancarios']);
 
@@ -129,14 +82,16 @@ class TitularidadeController extends Controller
     }
 
     /**
-     * Remove um titular do imóvel.
-     * Não permite remover se existem repasses vinculados.
+     * Soft-deleta um titular. Não permite remover se há repasses vinculados.
+     * Auto-promove o próximo titular para responsável quando o removido era o atual.
      */
     public function destroy(Imovel $imovel, Titularidade $titularidade): JsonResponse
     {
-        // Verificar se tem repasses vinculados
+        // Garante que a titularidade pertence ao imóvel da URL (mitigação IDOR).
+        abort_unless($titularidade->imovel_id === $imovel->id, 404);
+
         $temRepasses = $titularidade->repasses()
-            ->withoutGlobalScopes()
+            ->withoutGlobalScopes([TenantScope::class])
             ->exists();
 
         if ($temRepasses) {
@@ -145,8 +100,38 @@ class TitularidadeController extends Controller
             ], 422);
         }
 
-        $titularidade->delete();
+        DB::transaction(function () use ($imovel, $titularidade) {
+            $eraResponsavel = $titularidade->papel === 'responsavel';
+            $titularidade->delete();
+
+            if ($eraResponsavel) {
+                // Promove o próximo titular ATIVO restante para responsável.
+                $proximo = Titularidade::withoutGlobalScopes([TenantScope::class])
+                    ->where('imovel_id', $imovel->id)
+                    ->orderBy('id')
+                    ->first();
+
+                $proximo?->update(['papel' => 'responsavel']);
+            }
+        });
 
         return response()->json(['message' => 'Titular removido.']);
+    }
+
+    /**
+     * Demove para 'observador' todos os titulares responsáveis de um imóvel,
+     * exceto o `$exceptId` informado. Reutilizado por store e update.
+     */
+    private function demoteOutrosResponsaveis(int $imovelId, ?int $exceptId = null): void
+    {
+        $query = Titularidade::withoutGlobalScopes([TenantScope::class])
+            ->where('imovel_id', $imovelId)
+            ->where('papel', 'responsavel');
+
+        if ($exceptId !== null) {
+            $query->where('id', '!=', $exceptId);
+        }
+
+        $query->update(['papel' => 'observador']);
     }
 }

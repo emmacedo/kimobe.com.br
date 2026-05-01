@@ -7,7 +7,6 @@ use App\Http\Requests\StoreImovelRequest;
 use App\Http\Requests\UpdateImovelRequest;
 use App\Models\Administradora;
 use App\Models\Imovel;
-use App\Models\Vinculo;
 use App\Services\TenantService;
 use App\Traits\ScopesPorPapel;
 use Illuminate\Http\RedirectResponse;
@@ -82,7 +81,7 @@ class ImovelController extends Controller
     }
 
     /**
-     * Salva um novo imóvel.
+     * Salva um novo imóvel, opcionalmente com condomínio e titulares informados juntos.
      */
     public function store(StoreImovelRequest $request): RedirectResponse
     {
@@ -94,23 +93,43 @@ class ImovelController extends Controller
 
         $dados = $request->validated();
         $condominioDados = $this->extrairDadosCondominio($dados);
+        $titulares = $dados['titulares'] ?? [];
+        unset($dados['titulares']);
 
         // Status default se não informado
         if (empty($dados['status'])) {
             $dados['status'] = 'disponivel';
         }
 
-        $imovel = DB::transaction(function () use ($dados, $condominioDados) {
+        $tenantId = app(TenantService::class)->getTenantId();
+
+        $imovel = DB::transaction(function () use ($dados, $condominioDados, $titulares, $tenantId) {
             $imovel = Imovel::create($dados);
 
             if ($condominioDados !== null) {
                 $imovel->condominio()->create($condominioDados);
             }
 
+            foreach ($titulares as $titular) {
+                $imovel->titularidades()->create([
+                    'tenant_id' => $tenantId,
+                    'vinculo_id' => $titular['vinculo_id'],
+                    'tipo_titular' => $titular['tipo_titular'],
+                    'papel' => $titular['papel'],
+                    'percentual' => $titular['percentual'],
+                    'dados_bancarios_id' => $titular['dados_bancarios_id'] ?? null,
+                ]);
+            }
+
             return $imovel;
         });
 
-        // Redireciona para edição para permitir upload de fotos e titulares imediatamente
+        // Mensagem contextual: se já tem titulares, vai direto para detalhes; senão, edição.
+        if (count($titulares) > 0) {
+            return redirect()->route('imoveis.show', $imovel)
+                ->with('success', 'Imóvel cadastrado com sucesso.');
+        }
+
         return redirect()->route('imoveis.edit', $imovel)
             ->with('success', 'Imóvel cadastrado com sucesso. Agora adicione fotos e titulares.');
     }
@@ -149,22 +168,8 @@ class ImovelController extends Controller
             'condominio',
         ]);
 
-        $tenantId = app(TenantService::class)->getTenantId();
-
-        // IDs dos vínculos que já são titulares deste imóvel
-        $titularVinculoIds = $imovel->titularidades->pluck('vinculo_id')->toArray();
-
-        // Proprietários disponíveis: vínculos com papel=proprietario no tenant que NÃO são titulares
-        $proprietariosDisponiveis = Vinculo::where('tenant_id', $tenantId)
-            ->where('papel', 'proprietario')
-            ->where('status', 'ativo')
-            ->whereNotIn('id', $titularVinculoIds)
-            ->with('user')
-            ->get();
-
         return Inertia::render('imoveis/editar', [
             'imovel' => $imovel,
-            'proprietariosDisponiveis' => $proprietariosDisponiveis,
             'administradoras' => Administradora::orderBy('nome')->get(),
         ]);
     }

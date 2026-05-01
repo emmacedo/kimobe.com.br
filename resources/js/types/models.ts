@@ -2,6 +2,25 @@ export interface User {
     id: number;
     name: string;
     email: string;
+    telefone?: string | null;
+    tipo_pessoa?: 'pf' | 'pj';
+    documento?: string | null;
+}
+
+/**
+ * Proprietário = Vinculo (papel='proprietario') + dados do User aninhados.
+ * É o formato retornado pelos endpoints /proprietarios/* e usado no autocomplete.
+ */
+export interface Proprietario {
+    vinculo_id: number;
+    user_id: number;
+    name: string;
+    email: string | null;
+    telefone: string | null;
+    tipo_pessoa: 'pf' | 'pj';
+    documento: string | null;
+    status: 'ativo' | 'inativo' | 'pendente';
+    email_placeholder?: boolean;
 }
 
 export interface Vinculo {

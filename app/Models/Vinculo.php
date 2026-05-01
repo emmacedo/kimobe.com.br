@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\TenantService;
 use Database\Factories\VinculoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -71,5 +72,19 @@ class Vinculo extends Model
     public function contratosComoInquilino(): HasMany
     {
         return $this->hasMany(Contrato::class, 'inquilino_vinculo_id');
+    }
+
+    /**
+     * Resolve route binding com filtro por tenant. Vinculo NÃO usa BelongsToTenant
+     * (é cross-tenant por natureza), então o filtro precisa ser aplicado no binding
+     * para evitar vazamento de dados entre tenants nas rotas /proprietarios/{vinculo}.
+     */
+    public function resolveRouteBinding($value, $field = null): ?Model
+    {
+        $tenantId = app(TenantService::class)->getTenantId();
+
+        return $this->where($field ?? $this->getRouteKeyName(), $value)
+            ->where('tenant_id', $tenantId)
+            ->first();
     }
 }

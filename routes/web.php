@@ -26,6 +26,7 @@ use App\Http\Controllers\FiadorController;
 use App\Http\Controllers\ImovelController;
 use App\Http\Controllers\ImovelFotoController;
 use App\Http\Controllers\PaginaInstitucionalController;
+use App\Http\Controllers\ProprietarioController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\RepasseComprovanteController;
@@ -116,6 +117,22 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.a
         Route::get('administradoras/{administradora}/editar', [AdministradoraController::class, 'edit'])->name('administradoras.edit');
         Route::put('administradoras/{administradora}', [AdministradoraController::class, 'update'])->name('administradoras.update');
         Route::delete('administradoras/{administradora}', [AdministradoraController::class, 'destroy'])->name('administradoras.destroy');
+
+        // Proprietários (CRUD + endpoints JSON para autocomplete e criação inline)
+        // Rotas estáticas/específicas ANTES das parametrizadas para evitar conflito.
+        Route::get('proprietarios', [ProprietarioController::class, 'index'])->name('proprietarios.index');
+        Route::get('proprietarios/criar', [ProprietarioController::class, 'create'])->name('proprietarios.create');
+        Route::get('proprietarios/buscar', [ProprietarioController::class, 'buscar'])->name('proprietarios.buscar');
+        Route::post('proprietarios', [ProprietarioController::class, 'store'])->name('proprietarios.store');
+        Route::post('proprietarios/inline', [ProprietarioController::class, 'storeInline'])->name('proprietarios.inline');
+        Route::get('proprietarios/{proprietario}/editar', [ProprietarioController::class, 'edit'])->name('proprietarios.edit');
+        Route::put('proprietarios/{proprietario}', [ProprietarioController::class, 'update'])->name('proprietarios.update');
+        Route::delete('proprietarios/{proprietario}', [ProprietarioController::class, 'destroy'])->name('proprietarios.destroy');
+    });
+
+    // Endpoint JSON: contas bancárias por vínculo — admin e proprietário (próprio)
+    Route::middleware(['role:admin,proprietario'])->group(function () {
+        Route::get('vinculos/{vinculo}/dados-bancarios', [DadosBancariosController::class, 'byVinculo'])->name('vinculos.dados-bancarios');
     });
 
     // Visualização: admin e proprietário (APÓS rotas estáticas para evitar conflito com {imovel})

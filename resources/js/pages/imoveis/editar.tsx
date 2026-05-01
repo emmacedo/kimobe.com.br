@@ -8,7 +8,7 @@ import { GerenciadorTitulares } from '@/components/gerenciador-titulares';
 import { ImovelForm, condominioVazio, type ImovelFormData } from '@/components/imovel-form';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Administradora, Condominio, ImovelFoto, Titularidade, Vinculo } from '@/types/models';
+import type { Administradora, Condominio, ImovelFoto, Titularidade } from '@/types/models';
 
 type ImovelData = {
     id: number;
@@ -37,14 +37,12 @@ type ImovelData = {
 
 type Props = {
     imovel: ImovelData;
-    proprietariosDisponiveis: Vinculo[];
     administradoras: Administradora[];
     errors?: Record<string, string>;
 };
 
 export default function EditarImovel({
     imovel,
-    proprietariosDisponiveis = [],
     administradoras,
     errors = {},
 }: Props) {
@@ -137,11 +135,11 @@ export default function EditarImovel({
                 {/* Fotos — componente real */}
                 <GerenciadorFotos imovelId={imovel.id} fotos={imovel.fotos ?? []} />
 
-                {/* Titulares — componente real */}
+                {/* Titulares — modo editar (persistência via endpoints) */}
                 <GerenciadorTitulares
+                    modo="editar"
                     imovelId={imovel.id}
                     titularidades={imovel.titularidades ?? []}
-                    proprietariosDisponiveis={proprietariosDisponiveis}
                 />
             </div>
 

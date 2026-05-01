@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\DadosBancarios;
 use App\Services\TenantService;
 use App\Support\Sanitize;
 use Illuminate\Foundation\Http\FormRequest;
@@ -70,7 +71,67 @@ class StoreImovelRequest extends FormRequest
             'condominio.acesso_login' => ['nullable', 'string', 'max:255'],
             'condominio.acesso_senha' => ['nullable', 'string', 'max:255'],
             'condominio.acesso_descricao' => ['nullable', 'string', 'max:5000'],
+
+            // Titulares (opcional — pode ser cadastrado depois na edição)
+            'titulares' => ['nullable', 'array'],
+            'titulares.*.vinculo_id' => [
+                'required', 'integer',
+                Rule::exists('vinculos', 'id')
+                    ->where('tenant_id', $tenantId)
+                    ->where('papel', 'proprietario')
+                    ->where('status', 'ativo'),
+            ],
+            'titulares.*.tipo_titular' => ['required', 'in:pessoa_fisica,empresa,inventario'],
+            'titulares.*.papel' => ['required', 'in:responsavel,observador'],
+            'titulares.*.percentual' => ['required', 'numeric', 'min:0.01', 'max:100'],
+            'titulares.*.dados_bancarios_id' => ['nullable', 'integer'],
         ];
+    }
+
+    /**
+     * Validações cruzadas dos titulares: exatamente 1 responsável, soma ≤ 100, vinculo_id único.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($v) {
+            $titulares = $this->input('titulares', []);
+            if (! is_array($titulares) || count($titulares) === 0) {
+                return;
+            }
+
+            $responsaveis = collect($titulares)->where('papel', 'responsavel')->count();
+            if ($responsaveis !== 1) {
+                $v->errors()->add('titulares', 'Deve haver exatamente 1 titular marcado como responsável.');
+            }
+
+            $soma = collect($titulares)->sum(fn ($t) => (float) ($t['percentual'] ?? 0));
+            if ($soma > 100.005) {
+                $v->errors()->add('titulares', 'A soma dos percentuais dos titulares ultrapassa 100%.');
+            }
+
+            $vinculoIds = collect($titulares)->pluck('vinculo_id');
+            if ($vinculoIds->count() !== $vinculoIds->unique()->count()) {
+                $v->errors()->add('titulares', 'Há proprietários duplicados na lista.');
+            }
+
+            // Valida que cada dados_bancarios_id pertence ao vinculo_id correspondente.
+            foreach ($titulares as $idx => $t) {
+                $dbId = $t['dados_bancarios_id'] ?? null;
+                $vincId = $t['vinculo_id'] ?? null;
+                if ($dbId === null || $vincId === null) {
+                    continue;
+                }
+
+                $valida = DadosBancarios::withoutGlobalScopes()
+                    ->where('id', $dbId)
+                    ->where('vinculo_id', $vincId)
+                    ->exists();
+
+                if (! $valida) {
+                    $v->errors()->add("titulares.{$idx}.dados_bancarios_id", 'Conta bancária inválida para este proprietário.');
+                }
+            }
+        });
     }
 
     /**

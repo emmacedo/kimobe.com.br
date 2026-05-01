@@ -2,8 +2,9 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ImovelForm, condominioVazio, type ImovelFormData } from '@/components/imovel-form';
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { GerenciadorTitulares, type TitularItem } from '@/components/gerenciador-titulares';
+import { ImovelForm, condominioVazio, type ImovelFormData } from '@/components/imovel-form';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Administradora } from '@/types/models';
@@ -39,10 +40,37 @@ export default function CriarImovel({ administradoras }: Props) {
     const [processing, setProcessing] = useState(false);
     const [confirmSair, setConfirmSair] = useState(false);
     const [dirty, setDirty] = useState(false);
+    const [titulares, setTitulares] = useState<TitularItem[]>([]);
+    const [dirtyTitulares, setDirtyTitulares] = useState(false);
 
     function handleSubmit(dados: ImovelFormData) {
+        // Validação local: se há titulares, exige exatamente 1 responsável.
+        if (titulares.length > 0) {
+            const responsaveis = titulares.filter((t) => t.papel === 'responsavel').length;
+            if (responsaveis !== 1) {
+                toast.error('Marque exatamente 1 titular como responsável.');
+                return;
+            }
+            const soma = titulares.reduce((acc, t) => acc + parseFloat(t.percentual || '0'), 0);
+            if (soma > 100.005) {
+                toast.error('A soma dos percentuais ultrapassa 100%.');
+                return;
+            }
+        }
+
+        const payload = {
+            ...dados,
+            titulares: titulares.map((t) => ({
+                vinculo_id: t.vinculo_id,
+                tipo_titular: t.tipo_titular,
+                papel: t.papel,
+                percentual: parseFloat(t.percentual),
+                dados_bancarios_id: t.dados_bancarios_id,
+            })),
+        };
+
         setProcessing(true);
-        router.post('/imoveis', dados, {
+        router.post('/imoveis', payload, {
             onSuccess: () => setProcessing(false),
             onError: () => {
                 setProcessing(false);
@@ -51,8 +79,13 @@ export default function CriarImovel({ administradoras }: Props) {
         });
     }
 
+    function handleTitularesChange(novos: TitularItem[]) {
+        setTitulares(novos);
+        setDirtyTitulares(novos.length > 0);
+    }
+
     function handleVoltar() {
-        if (dirty) {
+        if (dirty || dirtyTitulares) {
             setConfirmSair(true);
         } else {
             router.visit('/imoveis');
@@ -79,6 +112,13 @@ export default function CriarImovel({ administradoras }: Props) {
                     onDirtyChange={setDirty}
                     onCancel={handleVoltar}
                     textoBotao="Salvar"
+                    mostrarPlaceholders={false}
+                />
+
+                <GerenciadorTitulares
+                    modo="criar"
+                    titulares={titulares}
+                    onChange={handleTitularesChange}
                 />
             </div>
 

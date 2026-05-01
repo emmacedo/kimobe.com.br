@@ -1,0 +1,1 @@
+import{n as e,t}from"./jsx-runtime-5GUz_AeQ.js";var n=e(),r=t();function i(e){let t=(0,n.c)(4),{data:i}=e,a;t[0]===i?a=t[1]:(a=JSON.stringify(i),t[0]=i,t[1]=a);let o;return t[2]===a?o=t[3]:(o=(0,r.jsx)(`script`,{type:`application/ld+json`,dangerouslySetInnerHTML:{__html:a}}),t[2]=a,t[3]=o),o}export{i as t};

@@ -6,9 +6,10 @@ use App\Models\Cobranca;
 use App\Models\CobrancaItemExtra;
 use App\Models\Contrato;
 use App\Models\Repasse;
+use App\Models\Scopes\TenantScope;
 use App\Models\Titularidade;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CobrancaService
 {
@@ -120,7 +121,7 @@ class CobrancaService
         try {
             app(NotificacaoAdminService::class)->notificarCobrancaGerada($cobranca);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Falha ao notificar cobrança gerada: {$e->getMessage()}");
+            Log::warning("Falha ao notificar cobrança gerada: {$e->getMessage()}");
         }
 
         return $cobranca;
@@ -185,7 +186,8 @@ class CobrancaService
      */
     public function gerarRepasses(Cobranca $cobranca, Contrato $contrato, string $dataBase): void
     {
-        $titularidades = Titularidade::withoutGlobalScopes()
+        // Apenas titularidades ATIVAS recebem repasses — soft-deletadas ficaram fora da relação.
+        $titularidades = Titularidade::withoutGlobalScopes([TenantScope::class])
             ->where('imovel_id', $contrato->imovel_id)
             ->get();
 
@@ -196,7 +198,7 @@ class CobrancaService
             : null;
 
         // Data prevista: +7 dias corridos
-        $dataPrevista = date('Y-m-d', strtotime($dataBase . ' +7 days'));
+        $dataPrevista = date('Y-m-d', strtotime($dataBase.' +7 days'));
 
         foreach ($titularidades as $tit) {
             $percentual = (float) $tit->percentual / 100;
@@ -221,7 +223,7 @@ class CobrancaService
             try {
                 app(NotificacaoAdminService::class)->notificarRepassePendente($repasse);
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning("Falha ao notificar repasse pendente: {$e->getMessage()}");
+                Log::warning("Falha ao notificar repasse pendente: {$e->getMessage()}");
             }
         }
     }

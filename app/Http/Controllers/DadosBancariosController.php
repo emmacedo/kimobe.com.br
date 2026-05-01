@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DadosBancarios;
+use App\Models\Scopes\TenantScope;
 use App\Models\Titularidade;
 use App\Models\Vinculo;
 use App\Services\TenantService;
@@ -33,19 +34,39 @@ class DadosBancariosController extends Controller
         }
 
         $contas = $query->orderBy('apelido')->get()->map(function ($conta) {
-            // Contar imóveis que usam esta conta para repasse
-            $imoveisCount = Titularidade::withoutGlobalScopes()
+            // Contar imóveis ATIVOS que usam esta conta para repasse (ignora titularidades soft-deletadas).
+            $imoveisCount = Titularidade::withoutGlobalScopes([TenantScope::class])
                 ->where('dados_bancarios_id', $conta->id)
                 ->distinct('imovel_id')
                 ->count('imovel_id');
 
             $conta->imoveis_count = $imoveisCount;
+
             return $conta;
         });
 
         return Inertia::render('dados-bancarios/index', [
             'contas' => $contas,
         ]);
+    }
+
+    /**
+     * Lista as contas bancárias de um vínculo específico (JSON, alimenta autocomplete
+     * do gerenciador de titulares no formulário de imóvel).
+     */
+    public function byVinculo(Vinculo $vinculo): JsonResponse
+    {
+        $tenantId = app(TenantService::class)->getTenantId();
+
+        // O resolveRouteBinding do Vinculo já filtra por tenant, mas reforço a checagem.
+        abort_unless($vinculo->tenant_id === $tenantId, 404);
+
+        // Proprietário só pode listar contas dos seus próprios vínculos.
+        if (! $this->isAdmin() && $vinculo->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        return response()->json($vinculo->dadosBancarios()->orderBy('apelido')->get());
     }
 
     /**
@@ -143,7 +164,7 @@ class DadosBancariosController extends Controller
             abort_unless($vinculo && $vinculo->user_id === auth()->id(), 403);
         }
 
-        // Desvincular das titularidades
+        // Desvincular das titularidades — incluindo soft-deletadas, para evitar FK órfã caso restauradas.
         Titularidade::withoutGlobalScopes()
             ->where('dados_bancarios_id', $dadosBancarios->id)
             ->update(['dados_bancarios_id' => null]);

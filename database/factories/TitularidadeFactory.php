@@ -25,7 +25,7 @@ class TitularidadeFactory extends Factory
         return [
             'tenant_id' => Tenant::factory(),
             'imovel_id' => Imovel::factory(),
-            'vinculo_id' => Vinculo::factory(),
+            'vinculo_id' => Vinculo::factory()->proprietario(),
             'dados_bancarios_id' => null,
             'tipo_titular' => 'pessoa_fisica',
             'papel' => 'responsavel',

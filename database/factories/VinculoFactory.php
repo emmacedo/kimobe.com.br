@@ -28,4 +28,19 @@ class VinculoFactory extends Factory
             'status' => 'ativo',
         ];
     }
+
+    public function proprietario(): static
+    {
+        return $this->state(fn () => ['papel' => 'proprietario']);
+    }
+
+    public function inquilino(): static
+    {
+        return $this->state(fn () => ['papel' => 'inquilino']);
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn () => ['papel' => 'admin']);
+    }
 }

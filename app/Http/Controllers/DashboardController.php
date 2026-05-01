@@ -6,6 +6,7 @@ use App\Models\Cobranca;
 use App\Models\Contrato;
 use App\Models\Imovel;
 use App\Models\Repasse;
+use App\Models\Scopes\TenantScope;
 use App\Models\Vinculo;
 use App\Services\TenantService;
 use Illuminate\Http\Request;
@@ -94,7 +95,7 @@ class DashboardController extends Controller
 
             $rendimentoMes = Repasse::withoutGlobalScopes()
                 ->where('status', 'realizado')
-                ->whereHas('titularidade', fn ($q) => $q->withoutGlobalScopes()->whereIn('vinculo_id', $vinculoIds))
+                ->whereHas('titularidade', fn ($q) => $q->withoutGlobalScopes([TenantScope::class])->whereIn('vinculo_id', $vinculoIds))
                 ->whereMonth('data_realizada', now()->month)
                 ->whereYear('data_realizada', now()->year)
                 ->sum('valor_liquido');
@@ -115,7 +116,7 @@ class DashboardController extends Controller
         // Repasses realizados no mês
         $receitaMes = Repasse::withoutGlobalScopes()
             ->where('status', 'realizado')
-            ->whereHas('titularidade', fn ($q) => $q->withoutGlobalScopes()->whereIn('vinculo_id', $vinculoIds))
+            ->whereHas('titularidade', fn ($q) => $q->withoutGlobalScopes([TenantScope::class])->whereIn('vinculo_id', $vinculoIds))
             ->whereMonth('data_realizada', now()->month)
             ->whereYear('data_realizada', now()->year)
             ->sum('valor_liquido');
@@ -123,7 +124,7 @@ class DashboardController extends Controller
         // Repasses pendentes
         $repassesPendentes = Repasse::withoutGlobalScopes()
             ->where('status', 'pendente')
-            ->whereHas('titularidade', fn ($q) => $q->withoutGlobalScopes()->whereIn('vinculo_id', $vinculoIds));
+            ->whereHas('titularidade', fn ($q) => $q->withoutGlobalScopes([TenantScope::class])->whereIn('vinculo_id', $vinculoIds));
 
         $pendentesCount = (clone $repassesPendentes)->count();
         $pendentesValor = (clone $repassesPendentes)->sum('valor_liquido');
@@ -133,7 +134,7 @@ class DashboardController extends Controller
 
         // Últimos 10 repasses
         $ultimosRepasses = Repasse::withoutGlobalScopes()
-            ->whereHas('titularidade', fn ($q) => $q->withoutGlobalScopes()->whereIn('vinculo_id', $vinculoIds))
+            ->whereHas('titularidade', fn ($q) => $q->withoutGlobalScopes([TenantScope::class])->whereIn('vinculo_id', $vinculoIds))
             ->with(['cobranca.contrato.imovel', 'titularidade.vinculo.user'])
             ->orderBy('data_prevista', 'desc')
             ->limit(10)
