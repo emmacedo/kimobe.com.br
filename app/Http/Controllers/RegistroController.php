@@ -58,6 +58,7 @@ class RegistroController extends Controller
             'cnpj' => ['nullable', 'required_if:tipo_tenant,imobiliaria', 'string', 'max:18'],
             'legal_name' => ['nullable', 'string', 'max:255', Rule::requiredIf($request->tipo_tenant === 'imobiliaria')],
             'state_registration' => ['nullable', 'string', 'max:30'],
+            'municipal_registration' => ['nullable', 'string', 'max:30'],
             'termos' => ['required', 'accepted'],
             'accept_auto_upgrade' => ['accepted'],
         ], [

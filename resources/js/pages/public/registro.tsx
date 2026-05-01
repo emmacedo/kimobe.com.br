@@ -38,6 +38,7 @@ export default function RegistroPage({ planos, plano_selecionado }: Props) {
     const [nomeTenant, setNomeTenant] = useState('');
     const [legalName, setLegalName] = useState('');
     const [stateRegistration, setStateRegistration] = useState('');
+    const [municipalRegistration, setMunicipalRegistration] = useState('');
     const [cnpj, setCnpj] = useState('');
     const [termos, setTermos] = useState(false);
     const [acceptAutoUpgrade, setAcceptAutoUpgrade] = useState(false);
@@ -78,6 +79,7 @@ export default function RegistroPage({ planos, plano_selecionado }: Props) {
                 cnpj: tipoTenant === 'imobiliaria' ? cnpj : undefined,
                 legal_name: tipoTenant === 'imobiliaria' ? legalName : undefined,
                 state_registration: tipoTenant === 'imobiliaria' ? stateRegistration : undefined,
+                municipal_registration: tipoTenant === 'imobiliaria' ? municipalRegistration : undefined,
                 termos,
                 accept_auto_upgrade: acceptAutoUpgrade,
             },
@@ -215,10 +217,19 @@ export default function RegistroPage({ planos, plano_selecionado }: Props) {
                                                 <InputCnpj value={cnpj} onChange={setCnpj} />
                                                 <InputError message={errors?.cnpj} />
                                             </div>
-                                            <div>
-                                                <Label>Inscrição Estadual <span className="text-[#8A918E]">(opcional)</span></Label>
-                                                <Input value={stateRegistration} onChange={(e) => setStateRegistration(e.target.value)} className="bg-white border-[#D8DCDA]" placeholder="Deixe em branco se isento" />
-                                                <InputError message={errors?.state_registration} />
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <div>
+                                                    <Label>Inscrição Municipal <span className="text-[#8A918E]">(opcional)</span></Label>
+                                                    <Input value={municipalRegistration} onChange={(e) => setMunicipalRegistration(e.target.value)} className="bg-white border-[#D8DCDA]" placeholder="CCM da prefeitura" />
+                                                    <p className="mt-1 text-[11px] text-[#8A918E]">Comum em corretoras — emissão de NFS-e e ISS.</p>
+                                                    <InputError message={errors?.municipal_registration} />
+                                                </div>
+                                                <div>
+                                                    <Label>Inscrição Estadual <span className="text-[#8A918E]">(opcional)</span></Label>
+                                                    <Input value={stateRegistration} onChange={(e) => setStateRegistration(e.target.value)} className="bg-white border-[#D8DCDA]" placeholder="Deixe em branco se isento" />
+                                                    <p className="mt-1 text-[11px] text-[#8A918E]">Geralmente não se aplica a serviços de corretagem.</p>
+                                                    <InputError message={errors?.state_registration} />
+                                                </div>
                                             </div>
                                         </>
                                     )}

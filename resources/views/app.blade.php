@@ -17,9 +17,9 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="icon" href="/favicon.ico?v={{ filemtime(public_path('favicon.ico')) }}" sizes="any">
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg?v={{ filemtime(public_path('favicon.svg')) }}">
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v={{ filemtime(public_path('apple-touch-icon.png')) }}">
         <link rel="manifest" href="/site.webmanifest">
         <meta name="theme-color" content="#0A4F5C">
 

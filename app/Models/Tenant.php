@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Kicol\FullFlow\Models\FullFlowPlan;
 
 #[Fillable([
-    'nome', 'legal_name', 'tipo', 'tipo_documento', 'documento', 'state_registration',
+    'nome', 'legal_name', 'tipo', 'tipo_documento', 'documento', 'state_registration', 'municipal_registration',
     'status',
     'is_exempt_from_subscription', 'motivo_isencao', 'auto_upgrade_enabled',
     'bloqueado_em', 'motivo_bloqueio',

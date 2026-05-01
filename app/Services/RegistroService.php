@@ -47,6 +47,7 @@ class RegistroService
                 'tipo_documento' => $tipoDocumento,
                 'documento' => $documento,
                 'state_registration' => $dados['state_registration'] ?? null,
+                'municipal_registration' => $dados['municipal_registration'] ?? null,
                 'status' => 'ativo',
                 'auto_upgrade_enabled' => true,
             ]);
