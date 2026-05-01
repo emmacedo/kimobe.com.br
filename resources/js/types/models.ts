@@ -80,6 +80,36 @@ export interface Fiador {
     uf: string;
 }
 
+export interface Administradora {
+    id: number;
+    nome: string;
+    cpf_cnpj: string | null;
+    telefone: string | null;
+    email: string | null;
+    site: string | null;
+    contato_interno_nome: string | null;
+    cep: string | null;
+    logradouro: string | null;
+    numero: string | null;
+    complemento: string | null;
+    bairro: string | null;
+    cidade: string | null;
+    uf: string | null;
+    observacoes: string | null;
+}
+
+export interface Condominio {
+    id: number;
+    imovel_id: number;
+    administradora_id: number | null;
+    dia_vencimento: number | null;
+    valor: string | null;
+    acesso_login: string | null;
+    acesso_senha: string | null;
+    acesso_descricao: string | null;
+    administradora?: Administradora | null;
+}
+
 export interface Imovel {
     id: number;
     cep: string;
@@ -89,6 +119,7 @@ export interface Imovel {
     bairro: string;
     cidade: string;
     uf: string;
+    inscricao_iptu: string | null;
     tipo: string;
     status: string;
     quartos: number | null;
@@ -104,4 +135,5 @@ export interface Imovel {
     foto_principal: ImovelFoto | null;
     fotos: ImovelFoto[];
     titularidades: Titularidade[];
+    condominio?: Condominio | null;
 }

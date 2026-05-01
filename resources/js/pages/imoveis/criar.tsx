@@ -2,10 +2,11 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { ImovelForm, type ImovelFormData } from '@/components/imovel-form';
+import { ImovelForm, condominioVazio, type ImovelFormData } from '@/components/imovel-form';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
+import type { Administradora } from '@/types/models';
 
 const dadosIniciais: ImovelFormData = {
     cep: '',
@@ -26,9 +27,14 @@ const dadosIniciais: ImovelFormData = {
     area_m2: null,
     valor_aluguel_sugerido: null,
     observacoes: '',
+    condominio: { ...condominioVazio },
 };
 
-export default function CriarImovel() {
+type Props = {
+    administradoras: Administradora[];
+};
+
+export default function CriarImovel({ administradoras }: Props) {
     const { errors } = usePage().props as any;
     const [processing, setProcessing] = useState(false);
     const [confirmSair, setConfirmSair] = useState(false);
@@ -66,6 +72,7 @@ export default function CriarImovel() {
 
                 <ImovelForm
                     dados={dadosIniciais}
+                    administradoras={administradoras}
                     errors={errors ?? {}}
                     processing={processing}
                     onSubmit={handleSubmit}

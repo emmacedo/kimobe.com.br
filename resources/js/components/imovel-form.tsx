@@ -1,9 +1,10 @@
-import { Camera, Users } from 'lucide-react';
+import { Camera, Eye, EyeOff, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { InputCep } from '@/components/input-cep';
 import InputError from '@/components/input-error';
 import { InputMoeda } from '@/components/input-moeda';
 import { SelectUf } from '@/components/select-uf';
+import { SeletorAdministradora } from '@/components/seletor-administradora';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +16,25 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import type { Administradora } from '@/types/models';
+
+export type CondominioFormData = {
+    administradora_id: number | null;
+    dia_vencimento: number | null;
+    valor: number | null;
+    acesso_login: string;
+    acesso_senha: string;
+    acesso_descricao: string;
+};
+
+export const condominioVazio: CondominioFormData = {
+    administradora_id: null,
+    dia_vencimento: null,
+    valor: null,
+    acesso_login: '',
+    acesso_senha: '',
+    acesso_descricao: '',
+};
 
 export type ImovelFormData = {
     cep: string;
@@ -35,10 +55,12 @@ export type ImovelFormData = {
     area_m2: number | null;
     valor_aluguel_sugerido: number | null;
     observacoes: string;
+    condominio: CondominioFormData;
 };
 
 type Props = {
     dados: ImovelFormData;
+    administradoras: Administradora[];
     errors: Record<string, string>;
     processing: boolean;
     onSubmit: (dados: ImovelFormData) => void;
@@ -53,12 +75,23 @@ const tiposSemQuartos = ['sala', 'galpao'];
 // Tipos de imóvel que NÃO têm andar
 const tiposSemAndar = ['casa'];
 
-export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange, onCancel, textoBotao, mostrarPlaceholders = true }: Props) {
+export function ImovelForm({
+    dados,
+    administradoras: administradorasIniciais,
+    errors,
+    processing,
+    onSubmit,
+    onDirtyChange,
+    onCancel,
+    textoBotao,
+    mostrarPlaceholders = true,
+}: Props) {
     const [form, setForm] = useState<ImovelFormData>(dados);
+    const [administradoras, setAdministradoras] = useState<Administradora[]>(administradorasIniciais);
+    const [verSenha, setVerSenha] = useState(false);
     const initialRef = useRef(JSON.stringify(dados));
     const numeroRef = useRef<HTMLInputElement>(null);
 
-    // Rastreia se o formulário está "sujo"
     useEffect(() => {
         const isDirty = JSON.stringify(form) !== initialRef.current;
         onDirtyChange?.(isDirty);
@@ -68,9 +101,23 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
         setForm((prev) => ({ ...prev, [key]: value }));
     }
 
+    function setCondominioField<K extends keyof CondominioFormData>(key: K, value: CondominioFormData[K]) {
+        setForm((prev) => ({ ...prev, condominio: { ...prev.condominio, [key]: value } }));
+    }
+
     function setNumericField(key: keyof ImovelFormData, value: string) {
         const num = value === '' ? null : parseInt(value, 10);
         setField(key, (isNaN(num as number) ? null : num) as any);
+    }
+
+    function setDiaVencimento(value: string) {
+        if (value === '') {
+            setCondominioField('dia_vencimento', null);
+            return;
+        }
+        const num = parseInt(value, 10);
+        if (isNaN(num)) return;
+        setCondominioField('dia_vencimento', Math.max(1, Math.min(31, num)));
     }
 
     function handleAddressFound(endereco: { logradouro: string; bairro: string; localidade: string; uf: string }) {
@@ -81,8 +128,11 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
             cidade: endereco.localidade || prev.cidade,
             uf: endereco.uf || prev.uf,
         }));
-        // Focus no campo número após auto-preenchimento
         setTimeout(() => numeroRef.current?.focus(), 100);
+    }
+
+    function handleAdministradoraCriada(administradora: Administradora) {
+        setAdministradoras((prev) => [...prev, administradora].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
     }
 
     function handleSubmit(e: React.FormEvent) {
@@ -99,7 +149,6 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
             <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
                 <h2 className="mb-4 text-sm font-medium text-[#1E2D30]">Endereço</h2>
                 <div className="space-y-4">
-                    {/* Linha 1 — CEP, Logradouro, Número, Complemento */}
                     <div className="grid gap-4 sm:grid-cols-12">
                         <div className="sm:col-span-2">
                             <Label htmlFor="cep">CEP</Label>
@@ -146,7 +195,6 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                         </div>
                     </div>
 
-                    {/* Linha 2 — Bairro, Cidade, UF, Inscrição IPTU */}
                     <div className="grid gap-4 sm:grid-cols-12">
                         <div className="sm:col-span-3">
                             <Label htmlFor="bairro">Bairro</Label>
@@ -200,7 +248,6 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
             <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
                 <h2 className="mb-4 text-sm font-medium text-[#1E2D30]">Características</h2>
                 <div className="space-y-4">
-                    {/* Tipo + Status */}
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                             <Label>Tipo do imóvel</Label>
@@ -235,7 +282,6 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                         </div>
                     </div>
 
-                    {/* Quartos, Suítes, Banheiros, Vagas */}
                     <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
                         {mostraQuartos && (
                             <>
@@ -295,7 +341,6 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                         </div>
                     </div>
 
-                    {/* Andar + Área */}
                     <div className="grid gap-4 sm:grid-cols-2">
                         {mostraAndar && (
                             <div>
@@ -330,7 +375,6 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                         </div>
                     </div>
 
-                    {/* Valor sugerido */}
                     <div className="max-w-sm">
                         <Label>Valor de aluguel sugerido</Label>
                         <InputMoeda
@@ -342,7 +386,110 @@ export function ImovelForm({ dados, errors, processing, onSubmit, onDirtyChange,
                 </div>
             </div>
 
-            {/* Seção 3 — Observações */}
+            {/* Seção 3 — Condomínio (opcional) */}
+            <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
+                <h2 className="mb-4 text-sm font-medium text-[#1E2D30]">
+                    Condomínio <span className="text-xs font-normal text-[#8A918E]">(opcional)</span>
+                </h2>
+                <div className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-12">
+                        <div className="sm:col-span-3">
+                            <Label htmlFor="dia_vencimento">Dia de vencimento</Label>
+                            <Input
+                                id="dia_vencimento"
+                                type="number"
+                                min={1}
+                                max={31}
+                                step={1}
+                                value={form.condominio.dia_vencimento ?? ''}
+                                onChange={(e) => setDiaVencimento(e.target.value)}
+                                placeholder="1 a 31"
+                                className="bg-white border-[#D8DCDA]"
+                            />
+                            <InputError message={errors['condominio.dia_vencimento']} />
+                        </div>
+                        <div className="sm:col-span-4">
+                            <Label htmlFor="valor_condominio">Valor mensal</Label>
+                            <InputMoeda
+                                value={form.condominio.valor}
+                                onChange={(v) => setCondominioField('valor', v)}
+                            />
+                            <InputError message={errors['condominio.valor']} />
+                        </div>
+                        <div className="sm:col-span-5">
+                            <Label>Administradora</Label>
+                            <SeletorAdministradora
+                                administradoras={administradoras}
+                                value={form.condominio.administradora_id}
+                                onChange={(id) => setCondominioField('administradora_id', id)}
+                                onAdministradoraCriada={handleAdministradoraCriada}
+                            />
+                            <InputError message={errors['condominio.administradora_id']} />
+                        </div>
+                    </div>
+
+                    {/* Sub-bloco: dados de acesso (opcional) */}
+                    <div className="rounded-md border border-dashed border-[#D8DCDA] bg-[#FAFBFA] p-4">
+                        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-[#8A918E]">
+                            Dados de acesso ao sistema da administradora
+                        </p>
+                        <div className="space-y-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <Label htmlFor="acesso_login">Login</Label>
+                                    <Input
+                                        id="acesso_login"
+                                        value={form.condominio.acesso_login}
+                                        onChange={(e) => setCondominioField('acesso_login', e.target.value)}
+                                        placeholder="Usuário do portal"
+                                        autoComplete="off"
+                                        className="bg-white border-[#D8DCDA]"
+                                    />
+                                    <InputError message={errors['condominio.acesso_login']} />
+                                </div>
+                                <div>
+                                    <Label htmlFor="acesso_senha">Senha</Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="acesso_senha"
+                                            type={verSenha ? 'text' : 'password'}
+                                            value={form.condominio.acesso_senha}
+                                            onChange={(e) => setCondominioField('acesso_senha', e.target.value)}
+                                            placeholder="Senha do portal"
+                                            autoComplete="off"
+                                            className="bg-white border-[#D8DCDA] pr-10"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setVerSenha((p) => !p)}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A918E] hover:text-[#1E2D30]"
+                                            aria-label={verSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                                        >
+                                            {verSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
+                                    <InputError message={errors['condominio.acesso_senha']} />
+                                </div>
+                            </div>
+                            <div>
+                                <Label htmlFor="acesso_descricao">Descrição</Label>
+                                <textarea
+                                    id="acesso_descricao"
+                                    value={form.condominio.acesso_descricao}
+                                    onChange={(e) => setCondominioField('acesso_descricao', e.target.value)}
+                                    placeholder="URL do portal, observações sobre o acesso, etc."
+                                    rows={2}
+                                    maxLength={5000}
+                                    className="w-full rounded-md border border-[#D8DCDA] bg-white px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-[#0A4F5C] focus:outline-none focus:ring-1 focus:ring-[#0A4F5C]"
+                                />
+                                <InputError message={errors['condominio.acesso_descricao']} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Seção 4 — Observações */}
             <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
                 <h2 className="mb-4 text-sm font-medium text-[#1E2D30]">Observações</h2>
                 <textarea

@@ -11,9 +11,11 @@ use App\Http\Controllers\Admin\AdminPaginaController;
 use App\Http\Controllers\Admin\AdminTemplateController;
 use App\Http\Controllers\Admin\AdminTwoFactorChallengeController;
 use App\Http\Controllers\Admin\AdminUsuarioController;
+use App\Http\Controllers\AdministradoraController;
 use App\Http\Controllers\CobrancaComprovanteController;
 use App\Http\Controllers\CobrancaController;
 use App\Http\Controllers\CobrancaItemExtraController;
+use App\Http\Controllers\CondominioController;
 use App\Http\Controllers\ContratoController;
 use App\Http\Controllers\ContratoResponsabilidadeController;
 use App\Http\Controllers\DadosBancariosController;
@@ -101,6 +103,19 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.a
         Route::post('imoveis/{imovel}/titularidades', [TitularidadeController::class, 'store']);
         Route::put('imoveis/{imovel}/titularidades/{titularidade}', [TitularidadeController::class, 'update']);
         Route::delete('imoveis/{imovel}/titularidades/{titularidade}', [TitularidadeController::class, 'destroy']);
+
+        // Condomínio do imóvel (sub-recurso 1:1)
+        Route::put('imoveis/{imovel}/condominio', [CondominioController::class, 'upsert'])->name('imoveis.condominio.upsert');
+        Route::delete('imoveis/{imovel}/condominio', [CondominioController::class, 'destroy'])->name('imoveis.condominio.destroy');
+
+        // Administradoras (CRUD próprio + endpoint inline para o dialog do imóvel)
+        Route::get('administradoras', [AdministradoraController::class, 'index'])->name('administradoras.index');
+        Route::get('administradoras/criar', [AdministradoraController::class, 'create'])->name('administradoras.create');
+        Route::post('administradoras', [AdministradoraController::class, 'store'])->name('administradoras.store');
+        Route::post('administradoras/inline', [AdministradoraController::class, 'storeInline'])->name('administradoras.inline');
+        Route::get('administradoras/{administradora}/editar', [AdministradoraController::class, 'edit'])->name('administradoras.edit');
+        Route::put('administradoras/{administradora}', [AdministradoraController::class, 'update'])->name('administradoras.update');
+        Route::delete('administradoras/{administradora}', [AdministradoraController::class, 'destroy'])->name('administradoras.destroy');
     });
 
     // Visualização: admin e proprietário (APÓS rotas estáticas para evitar conflito com {imovel})

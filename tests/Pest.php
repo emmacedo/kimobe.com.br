@@ -69,3 +69,26 @@ function createUserWithTenant(array $userAttributes = [], string $papel = 'admin
 
     return $user;
 }
+
+/**
+ * Cria um Tenant + User admin com vínculo ativo, retornando ambos.
+ * Uso: [$tenant, $user] = setupTenantComAdmin();
+ *
+ * @return array{0: Tenant, 1: User}
+ */
+function setupTenantComAdmin(array $tenantAttributes = []): array
+{
+    $tenant = Tenant::factory()->create([
+        'is_exempt_from_subscription' => true,
+        ...$tenantAttributes,
+    ]);
+    $user = User::factory()->create();
+    Vinculo::create([
+        'user_id' => $user->id,
+        'tenant_id' => $tenant->id,
+        'papel' => 'admin',
+        'status' => 'ativo',
+    ]);
+
+    return [$tenant, $user];
+}

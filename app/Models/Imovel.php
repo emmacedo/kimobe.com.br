@@ -68,6 +68,14 @@ class Imovel extends Model
     }
 
     /**
+     * Dados de condomínio do imóvel (opcional, 1:1).
+     */
+    public function condominio(): HasOne
+    {
+        return $this->hasOne(Condominio::class);
+    }
+
+    /**
      * Contratos de locação deste imóvel.
      */
     public function contratos(): HasMany

@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Banknote, Building2, CreditCard, FileText, Home, Mail, Menu, Receipt, Users, Wallet, X } from 'lucide-react';
+import { Banknote, Building, Building2, CreditCard, FileText, Home, Mail, Menu, Receipt, Users, Wallet, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
     DropdownMenu,
@@ -35,6 +35,7 @@ function getNavLinks(papeis: string[]): NavLink[] {
     if (isAdmin) {
         links.push(
             { title: 'Imóveis', href: '/imoveis', icon: Building2 },
+            { title: 'Administradoras', href: '/administradoras', icon: Building },
             { title: 'Contratos', href: '/contratos', icon: FileText },
             { title: 'Cobranças', href: '/financeiro/cobrancas', icon: Receipt },
             { title: 'Repasses', href: '/financeiro/repasses', icon: Wallet },

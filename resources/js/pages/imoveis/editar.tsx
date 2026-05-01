@@ -5,10 +5,10 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { GerenciadorFotos } from '@/components/gerenciador-fotos';
 import { GerenciadorTitulares } from '@/components/gerenciador-titulares';
-import { ImovelForm, type ImovelFormData } from '@/components/imovel-form';
+import { ImovelForm, condominioVazio, type ImovelFormData } from '@/components/imovel-form';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { ImovelFoto, Titularidade, Vinculo } from '@/types/models';
+import type { Administradora, Condominio, ImovelFoto, Titularidade, Vinculo } from '@/types/models';
 
 type ImovelData = {
     id: number;
@@ -32,15 +32,22 @@ type ImovelData = {
     observacoes: string | null;
     fotos: ImovelFoto[];
     titularidades: Titularidade[];
+    condominio: Condominio | null;
 };
 
 type Props = {
     imovel: ImovelData;
     proprietariosDisponiveis: Vinculo[];
+    administradoras: Administradora[];
     errors?: Record<string, string>;
 };
 
-export default function EditarImovel({ imovel, proprietariosDisponiveis = [], errors = {} }: Props) {
+export default function EditarImovel({
+    imovel,
+    proprietariosDisponiveis = [],
+    administradoras,
+    errors = {},
+}: Props) {
     const { flash } = usePage().props as any;
     const [processing, setProcessing] = useState(false);
     const [confirmSair, setConfirmSair] = useState(false);
@@ -69,6 +76,16 @@ export default function EditarImovel({ imovel, proprietariosDisponiveis = [], er
         area_m2: imovel.area_m2 ? parseFloat(imovel.area_m2) : null,
         valor_aluguel_sugerido: imovel.valor_aluguel_sugerido ? parseFloat(imovel.valor_aluguel_sugerido) : null,
         observacoes: imovel.observacoes ?? '',
+        condominio: imovel.condominio
+            ? {
+                  administradora_id: imovel.condominio.administradora_id,
+                  dia_vencimento: imovel.condominio.dia_vencimento,
+                  valor: imovel.condominio.valor ? parseFloat(imovel.condominio.valor) : null,
+                  acesso_login: imovel.condominio.acesso_login ?? '',
+                  acesso_senha: imovel.condominio.acesso_senha ?? '',
+                  acesso_descricao: imovel.condominio.acesso_descricao ?? '',
+              }
+            : { ...condominioVazio },
     };
 
     const enderecoResumo = imovel.complemento
@@ -107,6 +124,7 @@ export default function EditarImovel({ imovel, proprietariosDisponiveis = [], er
 
                 <ImovelForm
                     dados={dadosIniciais}
+                    administradoras={administradoras}
                     errors={errors}
                     processing={processing}
                     onSubmit={handleSubmit}

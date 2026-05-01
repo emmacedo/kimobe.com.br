@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Services\TenantService;
 use App\Support\Sanitize;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreImovelRequest extends FormRequest
 {
@@ -20,6 +22,14 @@ class StoreImovelRequest extends FormRequest
         if ($this->has('cep') && $this->cep) {
             $this->merge(['cep' => Sanitize::cep($this->cep)]);
         }
+
+        if (is_array($this->input('condominio'))) {
+            $condominio = $this->input('condominio');
+            if (isset($condominio['valor']) && $condominio['valor'] !== '' && $condominio['valor'] !== null) {
+                $condominio['valor'] = Sanitize::moeda($condominio['valor']);
+                $this->merge(['condominio' => $condominio]);
+            }
+        }
     }
 
     /**
@@ -27,6 +37,8 @@ class StoreImovelRequest extends FormRequest
      */
     public function rules(): array
     {
+        $tenantId = app(TenantService::class)->getTenantId();
+
         return [
             'cep' => ['required', 'string', 'max:9'], // Aceita com ou sem máscara (prepareForValidation sanitiza)
             'logradouro' => ['required', 'string', 'max:255'],
@@ -46,6 +58,18 @@ class StoreImovelRequest extends FormRequest
             'area_m2' => ['nullable', 'numeric', 'min:0'],
             'valor_aluguel_sugerido' => ['nullable', 'numeric', 'min:0'],
             'observacoes' => ['nullable', 'string', 'max:5000'],
+
+            // Condomínio (opcional — se presente, todos os campos são opcionais individualmente)
+            'condominio' => ['nullable', 'array'],
+            'condominio.administradora_id' => [
+                'nullable', 'integer',
+                Rule::exists('administradoras', 'id')->where('tenant_id', $tenantId)->whereNull('deleted_at'),
+            ],
+            'condominio.dia_vencimento' => ['nullable', 'integer', 'between:1,31'],
+            'condominio.valor' => ['nullable', 'numeric', 'min:0'],
+            'condominio.acesso_login' => ['nullable', 'string', 'max:255'],
+            'condominio.acesso_senha' => ['nullable', 'string', 'max:255'],
+            'condominio.acesso_descricao' => ['nullable', 'string', 'max:5000'],
         ];
     }
 
@@ -74,6 +98,10 @@ class StoreImovelRequest extends FormRequest
             'area_m2.min' => 'A área deve ser maior ou igual a zero.',
             'valor_aluguel_sugerido.min' => 'O valor de aluguel deve ser maior ou igual a zero.',
             'observacoes.max' => 'As observações não podem ter mais de 5000 caracteres.',
+            'condominio.administradora_id.exists' => 'A administradora selecionada é inválida.',
+            'condominio.dia_vencimento.between' => 'O dia de vencimento do condomínio deve estar entre 1 e 31.',
+            'condominio.valor.min' => 'O valor do condomínio deve ser maior ou igual a zero.',
+            'condominio.acesso_descricao.max' => 'A descrição de acesso não pode ter mais de 5000 caracteres.',
         ];
     }
 }

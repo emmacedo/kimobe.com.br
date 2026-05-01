@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Http\Concerns\EnsuresPlanCapacity;
 use App\Http\Requests\StoreImovelRequest;
 use App\Http\Requests\UpdateImovelRequest;
+use App\Models\Administradora;
 use App\Models\Imovel;
 use App\Models\Vinculo;
 use App\Services\TenantService;
 use App\Traits\ScopesPorPapel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -74,7 +76,9 @@ class ImovelController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('imoveis/criar');
+        return Inertia::render('imoveis/criar', [
+            'administradoras' => Administradora::orderBy('nome')->get(),
+        ]);
     }
 
     /**
@@ -89,13 +93,22 @@ class ImovelController extends Controller
         }
 
         $dados = $request->validated();
+        $condominioDados = $this->extrairDadosCondominio($dados);
 
         // Status default se não informado
         if (empty($dados['status'])) {
             $dados['status'] = 'disponivel';
         }
 
-        $imovel = Imovel::create($dados);
+        $imovel = DB::transaction(function () use ($dados, $condominioDados) {
+            $imovel = Imovel::create($dados);
+
+            if ($condominioDados !== null) {
+                $imovel->condominio()->create($condominioDados);
+            }
+
+            return $imovel;
+        });
 
         // Redireciona para edição para permitir upload de fotos e titulares imediatamente
         return redirect()->route('imoveis.edit', $imovel)
@@ -116,6 +129,7 @@ class ImovelController extends Controller
             'titularidades.vinculo.user',
             'titularidades.dadosBancarios',
             'contratos.inquilino.user',
+            'condominio.administradora',
         ]);
 
         return Inertia::render('imoveis/mostrar', [
@@ -132,6 +146,7 @@ class ImovelController extends Controller
             'fotos',
             'titularidades.vinculo.user',
             'titularidades.dadosBancarios',
+            'condominio',
         ]);
 
         $tenantId = app(TenantService::class)->getTenantId();
@@ -150,6 +165,7 @@ class ImovelController extends Controller
         return Inertia::render('imoveis/editar', [
             'imovel' => $imovel,
             'proprietariosDisponiveis' => $proprietariosDisponiveis,
+            'administradoras' => Administradora::orderBy('nome')->get(),
         ]);
     }
 
@@ -158,10 +174,53 @@ class ImovelController extends Controller
      */
     public function update(UpdateImovelRequest $request, Imovel $imovel): RedirectResponse
     {
-        $imovel->update($request->validated());
+        $dados = $request->validated();
+        $condominioDados = $this->extrairDadosCondominio($dados);
+
+        DB::transaction(function () use ($imovel, $dados, $condominioDados) {
+            $imovel->update($dados);
+
+            if ($condominioDados !== null) {
+                // Restaura registro soft-deleted antes do upsert para evitar conflito
+                // com a unique constraint em imovel_id.
+                $existente = $imovel->condominio()->withTrashed()->first();
+                if ($existente && $existente->trashed()) {
+                    $existente->restore();
+                }
+
+                $imovel->condominio()->updateOrCreate([], $condominioDados);
+            } else {
+                // Se o usuário limpou todos os campos do condomínio, soft-delete o registro existente
+                $imovel->condominio?->delete();
+            }
+        });
 
         return redirect()->route('imoveis.show', $imovel)
             ->with('success', 'Imóvel atualizado com sucesso.');
+    }
+
+    /**
+     * Extrai e remove o sub-array 'condominio' dos dados validados.
+     * Retorna null se não há dados significativos (todos os campos vazios).
+     *
+     * @param  array<string, mixed>  $dados  Modificado por referência para remover a chave 'condominio'.
+     * @return array<string, mixed>|null
+     */
+    private function extrairDadosCondominio(array &$dados): ?array
+    {
+        $condominio = $dados['condominio'] ?? null;
+        unset($dados['condominio']);
+
+        if (! is_array($condominio)) {
+            return null;
+        }
+
+        // Considera "vazio" se todos os campos significativos estão vazios
+        $temAlgumDado = collect($condominio)
+            ->filter(fn ($v) => $v !== null && $v !== '')
+            ->isNotEmpty();
+
+        return $temAlgumDado ? $condominio : null;
     }
 
     /**

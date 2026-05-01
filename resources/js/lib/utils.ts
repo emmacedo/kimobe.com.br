@@ -29,6 +29,28 @@ export function formataCep(cep: string): string {
 }
 
 /**
+ * Formata CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00) conforme a quantidade de dígitos.
+ */
+export function formataCpfCnpj(valor: string | null | undefined): string {
+    if (!valor) return '';
+    const d = valor.replace(/\D/g, '');
+    if (d.length === 11) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+    if (d.length === 14) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+    return valor;
+}
+
+/**
+ * Formata telefone brasileiro: (00) 0000-0000 (fixo) ou (00) 00000-0000 (celular).
+ */
+export function formataTelefone(valor: string | null | undefined): string {
+    if (!valor) return '';
+    const d = valor.replace(/\D/g, '');
+    if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+    return valor;
+}
+
+/**
  * Retorna saudação baseada no horário atual.
  */
 export function saudacao(nome: string): string {

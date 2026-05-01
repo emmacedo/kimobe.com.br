@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Bath,
     BedDouble,
+    Building,
     Building2,
     Calendar,
     Camera,
@@ -11,6 +12,7 @@ import {
     Layers,
     MapPin,
     Pencil,
+    Phone,
     Ruler,
     Trash2,
 } from 'lucide-react';
@@ -22,7 +24,7 @@ import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formataCep, formataMoeda } from '@/lib/utils';
+import { formataCep, formataCpfCnpj, formataMoeda, formataTelefone } from '@/lib/utils';
 
 // Labels legíveis para tipos de imóvel
 const tipoLabels: Record<string, string> = {
@@ -64,6 +66,26 @@ type ContratoResumo = {
     inquilino: { user: { name: string } };
 };
 
+type AdministradoraResumo = {
+    id: number;
+    nome: string;
+    cpf_cnpj: string | null;
+    telefone: string | null;
+    email: string | null;
+    contato_interno_nome: string | null;
+};
+
+type CondominioResumo = {
+    id: number;
+    administradora_id: number | null;
+    dia_vencimento: number | null;
+    valor: string | null;
+    acesso_login: string | null;
+    acesso_senha: string | null;
+    acesso_descricao: string | null;
+    administradora: AdministradoraResumo | null;
+};
+
 type ImovelData = {
     id: number;
     cep: string;
@@ -90,6 +112,7 @@ type ImovelData = {
     fotos: Foto[];
     titularidades: Titular[];
     contratos: ContratoResumo[];
+    condominio: CondominioResumo | null;
 };
 
 type Props = {
@@ -233,6 +256,90 @@ export default function MostrarImovel({ imovel }: Props) {
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Card Condomínio */}
+                        {imovel.condominio && (
+                            <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
+                                <div className="mb-3 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">
+                                    <Building className="h-3.5 w-3.5" />
+                                    Condomínio
+                                </div>
+                                <div className="grid gap-4 sm:grid-cols-3">
+                                    {imovel.condominio.valor && (
+                                        <div>
+                                            <p className="text-xs text-[#8A918E]">Valor mensal</p>
+                                            <p className="font-mono text-sm font-medium text-[#1E2D30]">
+                                                {formataMoeda(imovel.condominio.valor)}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {imovel.condominio.dia_vencimento && (
+                                        <div>
+                                            <p className="text-xs text-[#8A918E]">Dia de vencimento</p>
+                                            <p className="text-sm font-medium text-[#1E2D30]">
+                                                Dia {imovel.condominio.dia_vencimento}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {imovel.condominio.administradora && (
+                                        <div>
+                                            <p className="text-xs text-[#8A918E]">Administradora</p>
+                                            <Link
+                                                href={`/administradoras/${imovel.condominio.administradora.id}/editar`}
+                                                className="text-sm font-medium text-[#0A4F5C] hover:underline"
+                                            >
+                                                {imovel.condominio.administradora.nome}
+                                            </Link>
+                                            {imovel.condominio.administradora.telefone && (
+                                                <p className="mt-0.5 flex items-center gap-1 text-xs text-[#6B7370]">
+                                                    <Phone className="h-3 w-3" />
+                                                    {formataTelefone(imovel.condominio.administradora.telefone)}
+                                                </p>
+                                            )}
+                                            {imovel.condominio.administradora.cpf_cnpj && (
+                                                <p className="mt-0.5 font-mono text-xs text-[#6B7370]">
+                                                    {formataCpfCnpj(imovel.condominio.administradora.cpf_cnpj)}
+                                                </p>
+                                            )}
+                                            {imovel.condominio.administradora.contato_interno_nome && (
+                                                <p className="mt-0.5 text-xs text-[#6B7370]">
+                                                    Contato: {imovel.condominio.administradora.contato_interno_nome}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {(imovel.condominio.acesso_login || imovel.condominio.acesso_descricao) && (
+                                    <div className="mt-4 rounded-md border border-dashed border-[#D8DCDA] bg-[#FAFBFA] p-3">
+                                        <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">
+                                            Acesso ao sistema
+                                        </p>
+                                        <div className="grid gap-2 sm:grid-cols-2">
+                                            {imovel.condominio.acesso_login && (
+                                                <div>
+                                                    <p className="text-xs text-[#8A918E]">Login</p>
+                                                    <p className="font-mono text-sm text-[#1E2D30]">
+                                                        {imovel.condominio.acesso_login}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {imovel.condominio.acesso_senha && (
+                                                <div>
+                                                    <p className="text-xs text-[#8A918E]">Senha</p>
+                                                    <p className="font-mono text-sm text-[#1E2D30]">••••••••</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {imovel.condominio.acesso_descricao && (
+                                            <p className="mt-2 whitespace-pre-line text-xs text-[#6B7370]">
+                                                {imovel.condominio.acesso_descricao}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
 
