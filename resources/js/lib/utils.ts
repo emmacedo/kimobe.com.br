@@ -51,6 +51,20 @@ export function formataTelefone(valor: string | null | undefined): string {
 }
 
 /**
+ * CPF/CNPJ mascarado com asteriscos no meio — usado em listagens de busca onde
+ * mostrar o documento completo expõe dado sensível.
+ * CPF: 11 dígitos vira 123.[asterisks].[asterisks]-01.
+ * CNPJ: 14 dígitos vira 12.[asterisks].[asterisks].[asterisks]-34.
+ */
+export function formataCpfCnpjMascarado(doc: string | null | undefined): string {
+    if (!doc) return '';
+    const d = doc.replace(/\D/g, '');
+    if (d.length === 11) return `${d.slice(0, 3)}.***.***-${d.slice(9)}`;
+    if (d.length === 14) return `${d.slice(0, 2)}.***.***/****-${d.slice(12)}`;
+    return doc;
+}
+
+/**
  * Retorna saudação baseada no horário atual.
  */
 export function saudacao(nome: string): string {

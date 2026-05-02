@@ -60,11 +60,20 @@ class Contrato extends Model
     }
 
     /**
-     * Inquilino locatário (via vínculo no tenant).
+     * Inquilino principal (cache de performance — mantido em sincronia com
+     * contrato_inquilinos.principal=true). Usado por cobrança e notificações.
      */
     public function inquilino(): BelongsTo
     {
         return $this->belongsTo(Vinculo::class, 'inquilino_vinculo_id');
+    }
+
+    /**
+     * Todos os inquilinos do contrato (principal + co-inquilinos).
+     */
+    public function inquilinos(): HasMany
+    {
+        return $this->hasMany(ContratoInquilino::class);
     }
 
     /**
@@ -112,10 +121,11 @@ class Contrato extends Model
     public function getEnderecoResumido(): string
     {
         $imovel = $this->imovel;
-        $endereco = $imovel->logradouro . ', ' . $imovel->numero;
+        $endereco = $imovel->logradouro.', '.$imovel->numero;
         if ($imovel->complemento) {
-            $endereco .= ' — ' . $imovel->complemento;
+            $endereco .= ' — '.$imovel->complemento;
         }
+
         return $endereco;
     }
 }

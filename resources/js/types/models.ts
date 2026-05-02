@@ -23,6 +23,43 @@ export interface Proprietario {
     email_placeholder?: boolean;
 }
 
+/**
+ * Inquilino — mesmo shape do Proprietario mas semanticamente é Vinculo (papel='inquilino').
+ * Retornado por /inquilinos/* e /inquilinos/buscar.
+ */
+export interface Inquilino {
+    vinculo_id: number;
+    user_id: number;
+    name: string;
+    email: string | null;
+    telefone: string | null;
+    tipo_pessoa: 'pf' | 'pj';
+    documento: string | null;
+    status: 'ativo' | 'inativo' | 'pendente';
+    email_placeholder?: boolean;
+}
+
+/**
+ * Imóvel disponível no autocomplete de novo contrato (sem contrato ativo).
+ * Inclui informações dos titulares para exibir contexto na listagem.
+ */
+export interface ImovelDisponivel {
+    id: number;
+    logradouro: string;
+    numero: string;
+    complemento: string | null;
+    bairro: string;
+    cidade: string;
+    uf: string;
+    tipo: string;
+    valor_aluguel_sugerido: string | null;
+    titularidades: Array<{
+        vinculo: { user: { name: string } };
+        percentual: string;
+        papel: string;
+    }>;
+}
+
 export interface Vinculo {
     id: number;
     user_id: number;

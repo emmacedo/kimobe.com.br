@@ -17,6 +17,7 @@ use App\Http\Controllers\CobrancaController;
 use App\Http\Controllers\CobrancaItemExtraController;
 use App\Http\Controllers\CondominioController;
 use App\Http\Controllers\ContratoController;
+use App\Http\Controllers\ContratoInquilinoController;
 use App\Http\Controllers\ContratoResponsabilidadeController;
 use App\Http\Controllers\DadosBancariosController;
 use App\Http\Controllers\DashboardController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\EmailTrackingController;
 use App\Http\Controllers\FiadorController;
 use App\Http\Controllers\ImovelController;
 use App\Http\Controllers\ImovelFotoController;
+use App\Http\Controllers\InquilinoController;
 use App\Http\Controllers\PaginaInstitucionalController;
 use App\Http\Controllers\ProprietarioController;
 use App\Http\Controllers\PublicController;
@@ -147,6 +149,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.a
     // Gestão: apenas admin (rotas estáticas ANTES das parametrizadas)
     Route::middleware(['role:admin'])->group(function () {
         Route::get('contratos/criar', [ContratoController::class, 'create'])->name('contratos.create');
+        Route::get('contratos/imoveis-disponiveis', [ContratoController::class, 'imoveisDisponiveis'])->name('contratos.imoveis-disponiveis');
         Route::post('contratos', [ContratoController::class, 'store'])->name('contratos.store');
         Route::get('contratos/{contrato}/editar', [ContratoController::class, 'edit'])->name('contratos.edit');
         Route::put('contratos/{contrato}', [ContratoController::class, 'update'])->name('contratos.update');
@@ -162,6 +165,21 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.a
         Route::post('contratos/{contrato}/fiadores', [FiadorController::class, 'store']);
         Route::put('contratos/{contrato}/fiadores/{fiador}', [FiadorController::class, 'update']);
         Route::delete('contratos/{contrato}/fiadores/{fiador}', [FiadorController::class, 'destroy']);
+
+        // Inquilinos do contrato (gerenciador na edição: pivot contrato_inquilinos)
+        Route::post('contratos/{contrato}/inquilinos', [ContratoInquilinoController::class, 'store'])->name('contratos.inquilinos.store');
+        Route::put('contratos/{contrato}/inquilinos/{contratoInquilino}', [ContratoInquilinoController::class, 'update'])->name('contratos.inquilinos.update');
+        Route::delete('contratos/{contrato}/inquilinos/{contratoInquilino}', [ContratoInquilinoController::class, 'destroy'])->name('contratos.inquilinos.destroy');
+
+        // Inquilinos (CRUD próprio + endpoints JSON)
+        Route::get('inquilinos', [InquilinoController::class, 'index'])->name('inquilinos.index');
+        Route::get('inquilinos/criar', [InquilinoController::class, 'create'])->name('inquilinos.create');
+        Route::get('inquilinos/buscar', [InquilinoController::class, 'buscar'])->name('inquilinos.buscar');
+        Route::post('inquilinos', [InquilinoController::class, 'store'])->name('inquilinos.store');
+        Route::post('inquilinos/inline', [InquilinoController::class, 'storeInline'])->name('inquilinos.inline');
+        Route::get('inquilinos/{inquilino}/editar', [InquilinoController::class, 'edit'])->name('inquilinos.edit');
+        Route::put('inquilinos/{inquilino}', [InquilinoController::class, 'update'])->name('inquilinos.update');
+        Route::delete('inquilinos/{inquilino}', [InquilinoController::class, 'destroy'])->name('inquilinos.destroy');
     });
 
     // Visualização: todos os papéis (APÓS rotas estáticas para evitar conflito com {contrato})

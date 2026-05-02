@@ -5,17 +5,17 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ContratoForm, type ContratoFormData } from '@/components/contrato-form';
 import { GerenciadorFiadores } from '@/components/gerenciador-fiadores';
+import { GerenciadorInquilinos } from '@/components/gerenciador-inquilinos';
 import { GerenciadorResponsabilidades } from '@/components/gerenciador-responsabilidades';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 
 type Props = {
     contrato: any;
-    inquilinosDisponiveis: any[];
     errors?: Record<string, string>;
 };
 
-export default function EditarContrato({ contrato, inquilinosDisponiveis, errors = {} }: Props) {
+export default function EditarContrato({ contrato, errors = {} }: Props) {
     const { flash } = usePage().props as any;
     const [processing, setProcessing] = useState(false);
     const [confirmSair, setConfirmSair] = useState(false);
@@ -30,7 +30,6 @@ export default function EditarContrato({ contrato, inquilinosDisponiveis, errors
 
     const dadosIniciais: ContratoFormData = {
         imovel_id: contrato.imovel_id,
-        inquilino_vinculo_id: contrato.inquilino_vinculo_id,
         valor_aluguel: parseFloat(contrato.valor_aluguel),
         dia_vencimento: contrato.dia_vencimento,
         data_inicio: contrato.data_inicio?.split('T')[0] ?? '',
@@ -95,8 +94,13 @@ export default function EditarContrato({ contrato, inquilinosDisponiveis, errors
                     textoBotao="Salvar alterações"
                     modoEdicao
                     imovelAtual={imovel}
-                    inquilinoAtual={contrato.inquilino}
-                    inquilinosDisponiveis={inquilinosDisponiveis}
+                />
+
+                {/* Inquilinos do contrato (gerenciador via endpoints) */}
+                <GerenciadorInquilinos
+                    modo="editar"
+                    contratoId={contrato.id}
+                    inquilinos={contrato.inquilinos ?? []}
                 />
 
                 {/* Responsabilidades financeiras */}

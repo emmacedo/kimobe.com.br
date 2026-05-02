@@ -2,7 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Contrato;
+use App\Models\Scopes\TenantScope;
+use App\Services\TenantService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreContratoRequest extends FormRequest
 {
@@ -16,10 +20,26 @@ class StoreContratoRequest extends FormRequest
      */
     public function rules(): array
     {
+        $tenantId = app(TenantService::class)->getTenantId();
+
         return [
-            // Imóvel e inquilino
-            'imovel_id' => ['required', 'integer'],
-            'inquilino_vinculo_id' => ['required', 'integer'],
+            // Imóvel — exige existir no tenant. Validação de "sem contrato ativo" em withValidator
+            // (depois de verificar exists para mensagens corretas).
+            'imovel_id' => [
+                'required', 'integer',
+                Rule::exists('imoveis', 'id')->where('tenant_id', $tenantId)->whereNull('deleted_at'),
+            ],
+
+            // Inquilinos: lista de pelo menos 1, com 1 marcado como principal.
+            'inquilinos' => ['required', 'array', 'min:1'],
+            'inquilinos.*.vinculo_id' => [
+                'required', 'integer',
+                Rule::exists('vinculos', 'id')
+                    ->where('tenant_id', $tenantId)
+                    ->where('papel', 'inquilino')
+                    ->where('status', 'ativo'),
+            ],
+            'inquilinos.*.principal' => ['required', 'boolean'],
 
             // Valores e vigência
             'valor_aluguel' => ['required', 'numeric', 'min:0.01'],
@@ -43,8 +63,6 @@ class StoreContratoRequest extends FormRequest
 
             // Garantia
             'tipo_garantia' => ['required', 'in:caucao,fiador,seguro_fianca,titulo_capitalizacao,sem_garantia'],
-
-            // Campos condicionais de garantia
             'garantia_valor' => ['nullable', 'numeric', 'min:0'],
             'garantia_seguradora' => ['nullable', 'string', 'max:255'],
             'garantia_numero_apolice' => ['nullable', 'string', 'max:100'],
@@ -58,13 +76,47 @@ class StoreContratoRequest extends FormRequest
     }
 
     /**
+     * Validações cruzadas: imóvel sem contrato ativo + inquilinos com 1 principal exato + sem duplicata.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($v) {
+            // Imóvel não pode ter contrato com status='ativo' (ignora o tenant scope porque já foi
+            // validado pelo Rule::exists com tenant_id no rules).
+            $imovelId = $this->input('imovel_id');
+            if ($imovelId && Contrato::withoutGlobalScopes([TenantScope::class])->where('imovel_id', $imovelId)->where('status', 'ativo')->exists()) {
+                $v->errors()->add('imovel_id', 'Este imóvel já possui um contrato ativo.');
+            }
+
+            // Inquilinos: exatamente 1 principal + vinculo_id único na lista.
+            $inquilinos = $this->input('inquilinos', []);
+            if (! is_array($inquilinos) || count($inquilinos) === 0) {
+                return;
+            }
+
+            $principais = collect($inquilinos)->where('principal', true)->count();
+            if ($principais !== 1) {
+                $v->errors()->add('inquilinos', 'Marque exatamente 1 inquilino como principal.');
+            }
+
+            $vinculoIds = collect($inquilinos)->pluck('vinculo_id');
+            if ($vinculoIds->count() !== $vinculoIds->unique()->count()) {
+                $v->errors()->add('inquilinos', 'Há inquilinos duplicados na lista.');
+            }
+        });
+    }
+
+    /**
      * @return array<string, string>
      */
     public function messages(): array
     {
         return [
             'imovel_id.required' => 'Selecione o imóvel.',
-            'inquilino_vinculo_id.required' => 'Selecione o inquilino.',
+            'imovel_id.exists' => 'O imóvel selecionado é inválido.',
+            'inquilinos.required' => 'Selecione ao menos 1 inquilino.',
+            'inquilinos.min' => 'O contrato precisa de ao menos 1 inquilino.',
+            'inquilinos.*.vinculo_id.exists' => 'Inquilino inválido.',
             'valor_aluguel.required' => 'O valor do aluguel é obrigatório.',
             'valor_aluguel.min' => 'O valor do aluguel deve ser maior que zero.',
             'dia_vencimento.required' => 'Selecione o dia de vencimento.',

@@ -8,16 +8,21 @@ use App\Models\Contrato;
 use App\Models\Garantia;
 use App\Models\Imovel;
 use App\Models\Vinculo;
+use App\Services\NotificacaoAdminService;
 use App\Services\TenantService;
 use App\Traits\ScopesPorPapel;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ContratoController extends Controller
 {
     use ScopesPorPapel;
+
     /**
      * Listagem de contratos com filtros, paginação e eager load.
      */
@@ -36,7 +41,8 @@ class ContratoController extends Controller
                         ->orWhere('complemento', 'like', "%{$busca}%")
                         ->orWhere('bairro', 'like', "%{$busca}%")
                         ->orWhere('cidade', 'like', "%{$busca}%");
-                })->orWhereHas('inquilino.user', function ($qu) use ($busca) {
+                })->orWhereHas('inquilinos.vinculo.user', function ($qu) use ($busca) {
+                    // Busca em todos os inquilinos do contrato (principal + co-inquilinos)
                     $qu->where('name', 'like', "%{$busca}%");
                 });
             });
@@ -71,36 +77,86 @@ class ContratoController extends Controller
 
     /**
      * Formulário de criação de contrato.
+     * Listas pré-carregadas foram substituídas por autocompletes server-side
+     * (endpoint imoveisDisponiveis e /inquilinos/buscar).
      */
     public function create(): Response
     {
-        $tenantId = app(TenantService::class)->getTenantId();
-
-        $imoveisDisponiveis = Imovel::where('status', 'disponivel')
-            ->with('titularidades.vinculo.user')
-            ->orderBy('logradouro')
-            ->get();
-
-        $inquilinosDisponiveis = Vinculo::where('tenant_id', $tenantId)
-            ->where('papel', 'inquilino')
-            ->where('status', 'ativo')
-            ->with('user')
-            ->get();
-
-        return Inertia::render('contratos/criar', [
-            'imoveisDisponiveis' => $imoveisDisponiveis,
-            'inquilinosDisponiveis' => $inquilinosDisponiveis,
-        ]);
+        return Inertia::render('contratos/criar');
     }
 
     /**
-     * Salva um novo contrato.
+     * Endpoint JSON para autocomplete de imóveis disponíveis para novo contrato.
+     * Filtra: imóveis sem contrato com status='ativo'. Busca AND por palavra em
+     * endereço (logradouro/complemento/bairro/cidade) e nome dos titulares.
+     */
+    public function imoveisDisponiveis(Request $request): JsonResponse
+    {
+        $termo = trim((string) $request->input('q', ''));
+
+        if (mb_strlen($termo) < 2) {
+            return response()->json([]);
+        }
+
+        $palavras = array_filter(explode(' ', $termo));
+
+        $imoveis = Imovel::query()
+            ->whereDoesntHave('contratos', fn ($q) => $q->where('status', 'ativo'))
+            ->with('titularidades.vinculo.user')
+            ->where(function ($q) use ($palavras) {
+                foreach ($palavras as $palavra) {
+                    $like = '%'.$palavra.'%';
+                    $q->where(function ($qq) use ($like) {
+                        $qq->where('logradouro', 'like', $like)
+                            ->orWhere('complemento', 'like', $like)
+                            ->orWhere('bairro', 'like', $like)
+                            ->orWhere('cidade', 'like', $like)
+                            ->orWhereHas('titularidades.vinculo.user', fn ($qu) => $qu->where('name', 'like', $like));
+                    });
+                }
+            })
+            ->limit(20)
+            ->get();
+
+        return response()->json($imoveis->map(fn ($im) => [
+            'id' => $im->id,
+            'logradouro' => $im->logradouro,
+            'numero' => $im->numero,
+            'complemento' => $im->complemento,
+            'bairro' => $im->bairro,
+            'cidade' => $im->cidade,
+            'uf' => $im->uf,
+            'tipo' => $im->tipo,
+            'valor_aluguel_sugerido' => $im->valor_aluguel_sugerido,
+            'titularidades' => $im->titularidades->map(fn ($t) => [
+                'vinculo' => ['user' => ['name' => $t->vinculo->user->name]],
+                'percentual' => $t->percentual,
+                'papel' => $t->papel,
+            ]),
+        ]));
+    }
+
+    /**
+     * Salva um novo contrato com seus inquilinos (principal + co-inquilinos).
      * Cria garantia se aplicável e muda status do imóvel para alugado.
      */
     public function store(StoreContratoRequest $request): RedirectResponse
     {
         $dados = $request->validated();
         $tenantId = app(TenantService::class)->getTenantId();
+
+        // Extrai inquilinos (lista) — o cache 'inquilino_vinculo_id' é definido pelo principal.
+        $inquilinos = $dados['inquilinos'] ?? [];
+        unset($dados['inquilinos']);
+        $principal = collect($inquilinos)->firstWhere('principal', true);
+
+        // Defensive: a validação cruzada já bloqueia esse caso, mas garante que não dá NULL deref
+        // se o validator passar por estado inconsistente.
+        if (! $principal) {
+            return back()->withErrors(['inquilinos' => 'Marque exatamente 1 inquilino como principal.']);
+        }
+
+        $dados['inquilino_vinculo_id'] = $principal['vinculo_id'];
 
         // Separar dados de garantia
         $garantiaDados = $this->extrairDadosGarantia($dados);
@@ -111,26 +167,39 @@ class ContratoController extends Controller
             'garantia_numero_titulo', 'garantia_data_inicio', 'garantia_data_fim',
         ])->toArray();
 
-        $contrato = Contrato::create($contratoData);
+        $contrato = DB::transaction(function () use ($contratoData, $inquilinos, $garantiaDados, $dados, $tenantId) {
+            $contrato = Contrato::create($contratoData);
 
-        // Criar garantia se não for 'sem_garantia' e não for 'fiador' (fiador é cadastrado depois)
-        if ($garantiaDados && ! in_array($dados['tipo_garantia'], ['sem_garantia', 'fiador'])) {
-            Garantia::create([
-                'tenant_id' => $tenantId,
-                'contrato_id' => $contrato->id,
-                'tipo' => $dados['tipo_garantia'],
-                ...$garantiaDados,
-            ]);
-        }
+            // Popula a pivot contrato_inquilinos com todos os inquilinos do contrato.
+            foreach ($inquilinos as $inq) {
+                $contrato->inquilinos()->create([
+                    'tenant_id' => $tenantId,
+                    'vinculo_id' => $inq['vinculo_id'],
+                    'principal' => $inq['principal'],
+                ]);
+            }
 
-        // Marcar imóvel como alugado
-        Imovel::where('id', $dados['imovel_id'])->update(['status' => 'alugado']);
+            // Garantia (exceto fiador — que é cadastrado depois — e sem_garantia)
+            if ($garantiaDados && ! in_array($dados['tipo_garantia'], ['sem_garantia', 'fiador'])) {
+                Garantia::create([
+                    'tenant_id' => $tenantId,
+                    'contrato_id' => $contrato->id,
+                    'tipo' => $dados['tipo_garantia'],
+                    ...$garantiaDados,
+                ]);
+            }
 
-        // Notificar proprietários sobre novo contrato
+            // Marca imóvel como alugado.
+            Imovel::where('id', $dados['imovel_id'])->update(['status' => 'alugado']);
+
+            return $contrato;
+        });
+
+        // Notificar proprietários sobre novo contrato (fora da transação para não rollback em falha de email)
         try {
-            app(\App\Services\NotificacaoAdminService::class)->notificarNovoContratoProprietarios($contrato);
+            app(NotificacaoAdminService::class)->notificarNovoContratoProprietarios($contrato);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Falha ao notificar novo contrato: {$e->getMessage()}");
+            Log::warning("Falha ao notificar novo contrato: {$e->getMessage()}");
         }
 
         return redirect()->route('contratos.edit', $contrato)
@@ -150,6 +219,7 @@ class ContratoController extends Controller
             'imovel.titularidades.vinculo.user',
             'imovel.titularidades.dadosBancarios',
             'inquilino.user',
+            'inquilinos.vinculo.user',
             'responsabilidades',
             'garantia',
             'fiadores',
@@ -163,7 +233,7 @@ class ContratoController extends Controller
         // Contato do admin para inquilinos
         $contatoAdmin = null;
         if ($this->isInquilino() && ! $this->isAdmin()) {
-            $adminVinculo = \App\Models\Vinculo::where('tenant_id', app(TenantService::class)->getTenantId())
+            $adminVinculo = Vinculo::where('tenant_id', app(TenantService::class)->getTenantId())
                 ->where('papel', 'admin')
                 ->where('status', 'ativo')
                 ->with('user')
@@ -191,22 +261,14 @@ class ContratoController extends Controller
         $contrato->load([
             'imovel.titularidades.vinculo.user',
             'inquilino.user',
+            'inquilinos.vinculo.user',
             'garantia',
             'responsabilidades',
             'fiadores',
         ]);
 
-        $tenantId = app(TenantService::class)->getTenantId();
-
-        $inquilinosDisponiveis = Vinculo::where('tenant_id', $tenantId)
-            ->where('papel', 'inquilino')
-            ->where('status', 'ativo')
-            ->with('user')
-            ->get();
-
         return Inertia::render('contratos/editar', [
             'contrato' => $contrato,
-            'inquilinosDisponiveis' => $inquilinosDisponiveis,
         ]);
     }
 
@@ -255,7 +317,10 @@ class ContratoController extends Controller
         $contrato->update(['status' => 'encerrado']);
         $contrato->imovel->update(['status' => 'disponivel']);
 
-        try { app(\App\Services\NotificacaoAdminService::class)->notificarContratoEncerradoProprietarios($contrato); } catch (\Throwable $e) { /* silencioso */ }
+        try {
+            app(NotificacaoAdminService::class)->notificarContratoEncerradoProprietarios($contrato);
+        } catch (\Throwable $e) { /* silencioso */
+        }
 
         return redirect()->route('contratos.show', $contrato)
             ->with('success', 'Contrato encerrado com sucesso.');
@@ -273,7 +338,10 @@ class ContratoController extends Controller
         $contrato->update(['status' => 'cancelado']);
         $contrato->imovel->update(['status' => 'disponivel']);
 
-        try { app(\App\Services\NotificacaoAdminService::class)->notificarContratoEncerradoProprietarios($contrato); } catch (\Throwable $e) { /* silencioso */ }
+        try {
+            app(NotificacaoAdminService::class)->notificarContratoEncerradoProprietarios($contrato);
+        } catch (\Throwable $e) { /* silencioso */
+        }
 
         return redirect()->route('contratos.show', $contrato)
             ->with('success', 'Contrato cancelado.');

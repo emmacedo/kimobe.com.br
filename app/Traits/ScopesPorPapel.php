@@ -65,7 +65,8 @@ trait ScopesPorPapel
         }
 
         if ($this->isInquilino()) {
-            return $query->whereHas('inquilino', fn ($q) => $q->where('user_id', auth()->id()));
+            // Inquilino vê o contrato se for principal OU co-inquilino na pivot.
+            return $query->whereHas('inquilinos.vinculo', fn ($q) => $q->where('user_id', auth()->id()));
         }
 
         return $query->whereRaw('1 = 0');
@@ -85,7 +86,7 @@ trait ScopesPorPapel
         }
 
         if ($this->isInquilino()) {
-            return $query->whereHas('contrato.inquilino', fn ($q) => $q->where('user_id', auth()->id()));
+            return $query->whereHas('contrato.inquilinos.vinculo', fn ($q) => $q->where('user_id', auth()->id()));
         }
 
         return $query->whereRaw('1 = 0');
@@ -133,7 +134,10 @@ trait ScopesPorPapel
         }
 
         if ($this->isInquilino()) {
-            return $contrato->inquilino->user_id === auth()->id();
+            // Verifica se o user é principal ou co-inquilino do contrato.
+            return $contrato->inquilinos()
+                ->whereHas('vinculo', fn ($q) => $q->where('user_id', auth()->id()))
+                ->exists();
         }
 
         return false;

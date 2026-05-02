@@ -297,11 +297,33 @@ export default function MostrarContrato({ contrato, cobrancasRecentes, contatoAd
                             </Link>
                         </div>
 
-                        {/* Inquilino */}
+                        {/* Inquilino(s) */}
                         <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
-                            <p className="mb-3 text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Inquilino</p>
-                            <p className="text-sm font-medium text-[#1E2D30]">{inquilino.user.name}</p>
-                            <p className="mt-0.5 text-xs text-[#6B7370]">{inquilino.user.email}</p>
+                            <p className="mb-3 text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">
+                                {(contrato.inquilinos?.length ?? 0) > 1 ? 'Inquilinos' : 'Inquilino'}
+                            </p>
+                            {contrato.inquilinos && contrato.inquilinos.length > 0 ? (
+                                <div className="space-y-3">
+                                    {contrato.inquilinos.map((ci: any) => (
+                                        <div key={ci.id}>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-sm font-medium text-[#1E2D30]">{ci.vinculo.user.name}</p>
+                                                {ci.principal && (
+                                                    <Badge className="bg-[#E8F4F6] text-[#0A4F5C] text-[10px]">Principal</Badge>
+                                                )}
+                                            </div>
+                                            {ci.vinculo.user.email && !ci.vinculo.user.email.endsWith('@nao-cadastrado.kimobe.local') && (
+                                                <p className="mt-0.5 text-xs text-[#6B7370]">{ci.vinculo.user.email}</p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <>
+                                    <p className="text-sm font-medium text-[#1E2D30]">{inquilino.user.name}</p>
+                                    <p className="mt-0.5 text-xs text-[#6B7370]">{inquilino.user.email}</p>
+                                </>
+                            )}
                         </div>
 
                         {/* Contato da imobiliária — visível apenas para inquilinos */}

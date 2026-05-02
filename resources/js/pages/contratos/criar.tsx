@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ContratoForm, type ContratoFormData } from '@/components/contrato-form';
+import { GerenciadorInquilinos, type InquilinoItem } from '@/components/gerenciador-inquilinos';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 
 const dadosIniciais: ContratoFormData = {
     imovel_id: null,
-    inquilino_vinculo_id: null,
     valor_aluguel: null,
     dia_vencimento: null,
     data_inicio: '',
@@ -34,20 +34,34 @@ const dadosIniciais: ContratoFormData = {
     observacoes: '',
 };
 
-type Props = {
-    imoveisDisponiveis: any[];
-    inquilinosDisponiveis: any[];
-};
-
-export default function CriarContrato({ imoveisDisponiveis, inquilinosDisponiveis }: Props) {
+export default function CriarContrato() {
     const { errors } = usePage().props as any;
     const [processing, setProcessing] = useState(false);
     const [confirmSair, setConfirmSair] = useState(false);
     const [dirty, setDirty] = useState(false);
+    const [inquilinos, setInquilinos] = useState<InquilinoItem[]>([]);
+    const [dirtyInquilinos, setDirtyInquilinos] = useState(false);
 
     function handleSubmit(dados: ContratoFormData) {
+        // Valida estado dos inquilinos antes de submeter.
+        if (inquilinos.length === 0) {
+            toast.error('Adicione ao menos 1 inquilino antes de salvar.');
+            return;
+        }
+        const principais = inquilinos.filter((i) => i.principal).length;
+        if (principais !== 1) {
+            toast.error('Marque exatamente 1 inquilino como principal.');
+            return;
+        }
+
         setProcessing(true);
-        router.post('/contratos', dados, {
+        router.post('/contratos', {
+            ...dados,
+            inquilinos: inquilinos.map((i) => ({
+                vinculo_id: i.vinculo_id,
+                principal: i.principal,
+            })),
+        }, {
             onSuccess: () => setProcessing(false),
             onError: () => {
                 setProcessing(false);
@@ -56,8 +70,13 @@ export default function CriarContrato({ imoveisDisponiveis, inquilinosDisponivei
         });
     }
 
+    function handleInquilinosChange(novos: InquilinoItem[]) {
+        setInquilinos(novos);
+        setDirtyInquilinos(novos.length > 0);
+    }
+
     function handleVoltar() {
-        if (dirty) {
+        if (dirty || dirtyInquilinos) {
             setConfirmSair(true);
         } else {
             router.visit('/contratos');
@@ -83,8 +102,12 @@ export default function CriarContrato({ imoveisDisponiveis, inquilinosDisponivei
                     onDirtyChange={setDirty}
                     onCancel={handleVoltar}
                     textoBotao="Salvar contrato"
-                    imoveisDisponiveis={imoveisDisponiveis}
-                    inquilinosDisponiveis={inquilinosDisponiveis}
+                />
+
+                <GerenciadorInquilinos
+                    modo="criar"
+                    inquilinos={inquilinos}
+                    onChange={handleInquilinosChange}
                 />
             </div>
 

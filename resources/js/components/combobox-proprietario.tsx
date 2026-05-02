@@ -2,6 +2,7 @@ import { Combobox, ComboboxInput, ComboboxOption, ComboboxOptions } from '@headl
 import { Check, Plus, Search } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { formataCpfCnpjMascarado } from '@/lib/utils';
 import type { Proprietario } from '@/types/models';
 
 type Props = {
@@ -118,7 +119,7 @@ export function ComboboxProprietario({ value, onChange, onCriarNovo, placeholder
                                 <p className="truncate font-medium text-[#1E2D30]">{p.name}</p>
                                 <p className="truncate text-xs text-[#8A918E]">
                                     {p.tipo_pessoa === 'pj' ? 'PJ' : 'PF'}
-                                    {p.documento ? ` · ${formataDocLight(p.documento)}` : ''}
+                                    {p.documento ? ` · ${formataCpfCnpjMascarado(p.documento)}` : ''}
                                     {p.email ? ` · ${p.email}` : ''}
                                 </p>
                             </div>
@@ -142,9 +143,3 @@ export function ComboboxProprietario({ value, onChange, onCriarNovo, placeholder
     );
 }
 
-function formataDocLight(doc: string): string {
-    const d = doc.replace(/\D/g, '');
-    if (d.length === 11) return `${d.slice(0, 3)}.***.***-${d.slice(9)}`;
-    if (d.length === 14) return `${d.slice(0, 2)}.***.***/****-${d.slice(12)}`;
-    return doc;
-}

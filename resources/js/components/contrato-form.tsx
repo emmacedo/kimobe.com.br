@@ -1,10 +1,10 @@
-import { ClipboardList, Clock, FileText, Shield, Users } from 'lucide-react';
+import { ClipboardList, Clock, FileText, Shield } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { ComboboxImovel } from '@/components/combobox-imovel';
 import InputError from '@/components/input-error';
 import { InputMoeda } from '@/components/input-moeda';
 import { RadioCardGroup } from '@/components/radio-card-group';
 import { SimulacaoRepasse } from '@/components/simulacao-repasse';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,10 +17,10 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { formataMoeda } from '@/lib/utils';
+import type { ImovelDisponivel } from '@/types/models';
 
 export type ContratoFormData = {
     imovel_id: number | null;
-    inquilino_vinculo_id: number | null;
     valor_aluguel: number | null;
     dia_vencimento: number | null;
     data_inicio: string;
@@ -45,21 +45,6 @@ export type ContratoFormData = {
     observacoes: string;
 };
 
-type ImovelDisponivel = {
-    id: number;
-    logradouro: string;
-    numero: string;
-    complemento: string | null;
-    tipo: string;
-    valor_aluguel_sugerido: string | null;
-    titularidades: Array<{ vinculo: { user: { name: string } }; percentual: string; papel: string }>;
-};
-
-type InquilinoDisponivel = {
-    id: number;
-    user: { name: string; email: string };
-};
-
 type Props = {
     dados: ContratoFormData;
     errors: Record<string, string>;
@@ -69,10 +54,15 @@ type Props = {
     onCancel: () => void;
     textoBotao: string;
     modoEdicao?: boolean;
-    imoveisDisponiveis?: ImovelDisponivel[];
-    inquilinosDisponiveis?: InquilinoDisponivel[];
-    imovelAtual?: ImovelDisponivel | null;
-    inquilinoAtual?: InquilinoDisponivel | null;
+    /** Apenas em modoEdicao=true: dados do imóvel atual para mostrar (campo desabilitado). */
+    imovelAtual?: {
+        id: number;
+        logradouro: string;
+        numero: string;
+        complemento: string | null;
+        valor_aluguel_sugerido: string | null;
+        titularidades?: Array<{ vinculo: { user: { name: string } }; percentual: string }>;
+    } | null;
 };
 
 const MESES = [
@@ -80,15 +70,15 @@ const MESES = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-const tipoLabels: Record<string, string> = { apartamento: 'Apt', casa: 'Casa', sala: 'Sala', loja: 'Loja', galpao: 'Galpão' };
-
 export function ContratoForm({
     dados, errors, processing, onSubmit, onDirtyChange, onCancel, textoBotao,
-    modoEdicao = false, imoveisDisponiveis = [], inquilinosDisponiveis = [],
-    imovelAtual, inquilinoAtual,
+    modoEdicao = false, imovelAtual,
 }: Props) {
     const [form, setForm] = useState<ContratoFormData>(dados);
     const initialRef = useRef(JSON.stringify(dados));
+    // No modo criar, mantém o objeto completo do imóvel selecionado para mostrar contexto
+    // (titulares + valor sugerido). No modo editar usa imovelAtual.
+    const [imovelSelecionadoCompleto, setImovelSelecionadoCompleto] = useState<ImovelDisponivel | null>(null);
 
     useEffect(() => {
         onDirtyChange?.(JSON.stringify(form) !== initialRef.current);
@@ -104,9 +94,7 @@ export function ContratoForm({
     }
 
     // Imóvel selecionado (para contexto de titulares e simulação)
-    const imovelSelecionado = modoEdicao
-        ? imovelAtual
-        : imoveisDisponiveis.find((i) => i.id === form.imovel_id);
+    const imovelSelecionado = modoEdicao ? imovelAtual : imovelSelecionadoCompleto;
 
     // Titulares para simulação
     const titulares = (imovelSelecionado?.titularidades ?? []).map((t) => ({
@@ -114,11 +102,10 @@ export function ContratoForm({
         percentual: parseFloat(t.percentual),
     }));
 
-    // Ao selecionar imóvel, pré-preencher valor sugerido
-    function handleImovelChange(id: string) {
-        const imovelId = parseInt(id);
-        setField('imovel_id', imovelId);
-        const imovel = imoveisDisponiveis.find((i) => i.id === imovelId);
+    // Ao selecionar imóvel, pré-preencher valor sugerido (mantém comportamento atual).
+    function handleImovelChange(imovel: ImovelDisponivel | null) {
+        setImovelSelecionadoCompleto(imovel);
+        setField('imovel_id', imovel?.id ?? null);
         if (imovel?.valor_aluguel_sugerido && !form.valor_aluguel) {
             setField('valor_aluguel', parseFloat(imovel.valor_aluguel_sugerido));
         }
@@ -131,79 +118,26 @@ export function ContratoForm({
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Seção 1 — Imóvel e inquilino */}
+            {/* Seção 1 — Imóvel */}
             <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
-                <h2 className="mb-4 text-sm font-medium text-[#1E2D30]">Imóvel e inquilino</h2>
+                <h2 className="mb-4 text-sm font-medium text-[#1E2D30]">Imóvel</h2>
                 <div className="space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        {/* Imóvel */}
-                        <div>
-                            <Label>Imóvel</Label>
-                            {modoEdicao ? (
-                                <Input
-                                    value={imovelAtual ? (imovelAtual.complemento || `${imovelAtual.logradouro}, ${imovelAtual.numero}`) : ''}
-                                    disabled
-                                    className="bg-[#F7F8F7]"
-                                />
-                            ) : imoveisDisponiveis.length === 0 ? (
-                                <p className="mt-1 rounded-md bg-[#FFF4E5] p-3 text-xs text-[#8C5A10]">
-                                    Não há imóveis disponíveis para locação.
-                                </p>
-                            ) : (
-                                <Select value={form.imovel_id?.toString() ?? ''} onValueChange={handleImovelChange}>
-                                    <SelectTrigger className="bg-white border-[#D8DCDA]">
-                                        <SelectValue placeholder="Selecione o imóvel" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {imoveisDisponiveis.map((im) => (
-                                            <SelectItem key={im.id} value={im.id.toString()}>
-                                                <span className="flex items-center gap-2">
-                                                    {im.complemento || `${im.logradouro}, ${im.numero}`}
-                                                    <Badge variant="outline" className="text-[9px]">{tipoLabels[im.tipo] ?? im.tipo}</Badge>
-                                                    {im.valor_aluguel_sugerido && (
-                                                        <span className="text-[10px] text-[#8A918E]">{formataMoeda(im.valor_aluguel_sugerido)}</span>
-                                                    )}
-                                                </span>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                            <InputError message={errors.imovel_id} />
-                        </div>
-
-                        {/* Inquilino */}
-                        <div>
-                            <Label>Inquilino</Label>
-                            {modoEdicao ? (
-                                <Input value={inquilinoAtual?.user.name ?? ''} disabled className="bg-[#F7F8F7]" />
-                            ) : inquilinosDisponiveis.length === 0 ? (
-                                <p className="mt-1 rounded-md bg-[#FFF4E5] p-3 text-xs text-[#8C5A10]">
-                                    Não há inquilinos cadastrados.
-                                </p>
-                            ) : (
-                                <Select
-                                    value={form.inquilino_vinculo_id?.toString() ?? ''}
-                                    onValueChange={(v) => setField('inquilino_vinculo_id', parseInt(v))}
-                                >
-                                    <SelectTrigger className="bg-white border-[#D8DCDA]">
-                                        <SelectValue placeholder="Selecione o inquilino" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {inquilinosDisponiveis.map((inq) => (
-                                            <SelectItem key={inq.id} value={inq.id.toString()}>
-                                                {inq.user.name} — {inq.user.email}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                            <InputError message={errors.inquilino_vinculo_id} />
-                        </div>
+                    <div>
+                        <Label>Imóvel</Label>
+                        {modoEdicao ? (
+                            <Input
+                                value={imovelAtual ? (imovelAtual.complemento || `${imovelAtual.logradouro}, ${imovelAtual.numero}`) : ''}
+                                disabled
+                                className="bg-[#F7F8F7]"
+                            />
+                        ) : (
+                            <ComboboxImovel value={imovelSelecionadoCompleto} onChange={handleImovelChange} />
+                        )}
+                        <InputError message={errors.imovel_id} />
                     </div>
 
                     {/* Contexto: titulares do imóvel */}
-                    {imovelSelecionado && imovelSelecionado.titularidades.length > 0 && (
+                    {imovelSelecionado && imovelSelecionado.titularidades && imovelSelecionado.titularidades.length > 0 && (
                         <div className="rounded-md bg-[#F7F8F7] p-3">
                             <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Titulares do imóvel</p>
                             <div className="space-y-1">

@@ -67,11 +67,21 @@ class Vinculo extends Model
     }
 
     /**
-     * Contratos nos quais esta pessoa é inquilino.
+     * Contratos onde este vínculo é o inquilino PRINCIPAL (cache).
+     * NÃO inclui contratos onde é apenas co-inquilino — para isso, use participacoesEmContratos().
      */
     public function contratosComoInquilino(): HasMany
     {
         return $this->hasMany(Contrato::class, 'inquilino_vinculo_id');
+    }
+
+    /**
+     * Participações em contratos via pivot — inclui principal E co-inquilinos.
+     * Usado para count exato de contratos do inquilino na listagem.
+     */
+    public function participacoesEmContratos(): HasMany
+    {
+        return $this->hasMany(ContratoInquilino::class);
     }
 
     /**

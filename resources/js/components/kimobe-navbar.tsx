@@ -36,6 +36,7 @@ function getNavLinks(papeis: string[]): NavLink[] {
         links.push(
             { title: 'Imóveis', href: '/imoveis', icon: Building2 },
             { title: 'Proprietários', href: '/proprietarios', icon: UserCircle },
+            { title: 'Inquilinos', href: '/inquilinos', icon: Users },
             { title: 'Administradoras', href: '/administradoras', icon: Building },
             { title: 'Contratos', href: '/contratos', icon: FileText },
             { title: 'Cobranças', href: '/financeiro/cobrancas', icon: Receipt },
