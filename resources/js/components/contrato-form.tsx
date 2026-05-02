@@ -1,4 +1,4 @@
-import { ClipboardList, Clock, FileText, Shield } from 'lucide-react';
+import { ClipboardList, Clock, FileText, Shield, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { ComboboxImovel } from '@/components/combobox-imovel';
 import InputError from '@/components/input-error';
@@ -378,7 +378,7 @@ export function ContratoForm({
                         </div>
                     )}
 
-                    {form.tipo_garantia === 'fiador' && (
+                    {form.tipo_garantia === 'fiador' && !modoEdicao && (
                         <div className="rounded-md bg-[#F7F8F7] p-3 text-xs text-[#8A918E]">
                             <FileText className="mb-1 inline h-3.5 w-3.5" /> Os dados do fiador serão cadastrados após salvar o contrato.
                         </div>
