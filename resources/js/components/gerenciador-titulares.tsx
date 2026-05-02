@@ -1,5 +1,5 @@
 import { Landmark, Pencil, Plus, Trash2, UserPlus } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DialogTitularForm, type TitularFormData } from '@/components/dialog-titular-form';
@@ -68,24 +68,21 @@ function titularidadeParaItem(t: Titularidade): TitularItem {
 }
 
 export function GerenciadorTitulares(props: Props) {
+    // Estado local inicializado lazy a partir das props. Após o mount, mudanças
+    // vêm exclusivamente dos handlers internos (fetch no modo editar; setTitulares
+    // direto no modo criar). Sem sincronização com props pra evitar lint suppression
+    // e dependências instáveis. Se o pai precisar resetar a lista, força remount via key.
     const [titulares, setTitulares] = useState<TitularItem[]>(() =>
         props.modo === 'criar' ? props.titulares : props.titularidades.map(titularidadeParaItem),
     );
 
-    // Modo editar: sincroniza com a prop quando ela muda (Inertia preserveState).
+    // Modo criar: propaga estado para o pai a cada mudança (via ref pra manter callback estável).
+    const onChangeRef = useRef(props.modo === 'criar' ? props.onChange : null);
+    if (props.modo === 'criar') {
+        onChangeRef.current = props.onChange;
+    }
     useEffect(() => {
-        if (props.modo === 'editar') {
-            setTitulares(props.titularidades.map(titularidadeParaItem));
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [props.modo === 'editar' ? props.titularidades : null]);
-
-    // Modo criar: propaga estado para o pai.
-    useEffect(() => {
-        if (props.modo === 'criar') {
-            props.onChange(titulares);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        onChangeRef.current?.(titulares);
     }, [titulares]);
 
     const [dialogOpen, setDialogOpen] = useState(false);

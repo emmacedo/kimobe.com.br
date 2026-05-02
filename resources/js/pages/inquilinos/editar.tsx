@@ -3,10 +3,12 @@ import { ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
-import { InquilinoForm, type InquilinoFormData } from '@/components/inquilino-form';
 import { PageHeader } from '@/components/page-header';
+import { PessoaForm, type PessoaFormData } from '@/components/pessoa-form';
 import { Button } from '@/components/ui/button';
 import type { Inquilino } from '@/types/models';
+
+const AVISO_EMAIL_INQUILINO = 'Este inquilino foi cadastrado sem email. Adicione um email real se quiser que ele tenha acesso ao sistema futuramente.';
 
 type Props = {
     inquilino: Inquilino;
@@ -23,7 +25,7 @@ export default function EditarInquilino({ inquilino, errors = {} }: Props) {
         if (flash?.success) toast.success(flash.success);
     }, [flash?.success]);
 
-    const dadosIniciais: InquilinoFormData = {
+    const dadosIniciais: PessoaFormData = {
         name: inquilino.name,
         tipo_pessoa: inquilino.tipo_pessoa,
         documento: inquilino.documento ?? '',
@@ -31,7 +33,7 @@ export default function EditarInquilino({ inquilino, errors = {} }: Props) {
         email: inquilino.email ?? '',
     };
 
-    function handleSubmit(dados: InquilinoFormData) {
+    function handleSubmit(dados: PessoaFormData) {
         setProcessing(true);
         router.put(`/inquilinos/${inquilino.vinculo_id}`, dados, {
             onSuccess: () => setProcessing(false),
@@ -61,8 +63,10 @@ export default function EditarInquilino({ inquilino, errors = {} }: Props) {
                     </Button>
                 </PageHeader>
 
-                <InquilinoForm
+                <PessoaForm
                     dados={dadosIniciais}
+                    titulo="Dados do inquilino"
+                    avisoEmailTexto={AVISO_EMAIL_INQUILINO}
                     errors={errors}
                     processing={processing}
                     onSubmit={handleSubmit}

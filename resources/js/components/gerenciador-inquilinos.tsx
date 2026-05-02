@@ -1,5 +1,5 @@
 import { Plus, Star, Trash2, UserPlus } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { DialogAdicionarInquilino } from '@/components/dialog-adicionar-inquilino';
@@ -61,22 +61,21 @@ function backendParaItem(ci: ContratoInquilinoBackend): InquilinoItem {
 }
 
 export function GerenciadorInquilinos(props: Props) {
+    // Estado local inicializado lazy a partir das props. Após o mount, mudanças
+    // vêm exclusivamente dos handlers internos (fetch no modo editar; setInquilinos
+    // direto no modo criar). Sem sincronização com props pra evitar lint suppression
+    // e dependências instáveis. Se o pai precisar resetar a lista, força remount via key.
     const [inquilinos, setInquilinos] = useState<InquilinoItem[]>(() =>
         props.modo === 'criar' ? props.inquilinos : props.inquilinos.map(backendParaItem),
     );
 
+    // Modo criar: propaga estado para o pai a cada mudança.
+    const onChangeRef = useRef(props.modo === 'criar' ? props.onChange : null);
+    if (props.modo === 'criar') {
+        onChangeRef.current = props.onChange;
+    }
     useEffect(() => {
-        if (props.modo === 'editar') {
-            setInquilinos(props.inquilinos.map(backendParaItem));
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [props.modo === 'editar' ? props.inquilinos : null]);
-
-    useEffect(() => {
-        if (props.modo === 'criar') {
-            props.onChange(inquilinos);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        onChangeRef.current?.(inquilinos);
     }, [inquilinos]);
 
     const [dialogOpen, setDialogOpen] = useState(false);

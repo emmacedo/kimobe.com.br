@@ -4,12 +4,10 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PageHeader } from '@/components/page-header';
-import {
-    ProprietarioForm,
-    type ProprietarioFormData,
-    dadosIniciaisProprietario,
-} from '@/components/proprietario-form';
+import { PessoaForm, dadosIniciaisPessoa, type PessoaFormData } from '@/components/pessoa-form';
 import { Button } from '@/components/ui/button';
+
+const AVISO_EMAIL_PROPRIETARIO = 'Este proprietário foi cadastrado sem email. Adicione um email real se quiser que ele tenha acesso ao sistema futuramente.';
 
 export default function CriarProprietario() {
     const { errors } = usePage().props as any;
@@ -17,7 +15,7 @@ export default function CriarProprietario() {
     const [confirmSair, setConfirmSair] = useState(false);
     const [dirty, setDirty] = useState(false);
 
-    function handleSubmit(dados: ProprietarioFormData) {
+    function handleSubmit(dados: PessoaFormData) {
         setProcessing(true);
         router.post('/proprietarios', dados, {
             onSuccess: () => setProcessing(false),
@@ -47,8 +45,10 @@ export default function CriarProprietario() {
                     </Button>
                 </PageHeader>
 
-                <ProprietarioForm
-                    dados={dadosIniciaisProprietario}
+                <PessoaForm
+                    dados={dadosIniciaisPessoa}
+                    titulo="Dados do proprietário"
+                    avisoEmailTexto={AVISO_EMAIL_PROPRIETARIO}
                     errors={errors ?? {}}
                     processing={processing}
                     onSubmit={handleSubmit}

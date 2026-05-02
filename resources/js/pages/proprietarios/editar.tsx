@@ -4,12 +4,11 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PageHeader } from '@/components/page-header';
-import {
-    ProprietarioForm,
-    type ProprietarioFormData,
-} from '@/components/proprietario-form';
+import { PessoaForm, type PessoaFormData } from '@/components/pessoa-form';
 import { Button } from '@/components/ui/button';
 import type { Proprietario } from '@/types/models';
+
+const AVISO_EMAIL_PROPRIETARIO = 'Este proprietário foi cadastrado sem email. Adicione um email real se quiser que ele tenha acesso ao sistema futuramente.';
 
 type Props = {
     proprietario: Proprietario;
@@ -26,15 +25,15 @@ export default function EditarProprietario({ proprietario, errors = {} }: Props)
         if (flash?.success) toast.success(flash.success);
     }, [flash?.success]);
 
-    const dadosIniciais: ProprietarioFormData = {
+    const dadosIniciais: PessoaFormData = {
         name: proprietario.name,
         tipo_pessoa: proprietario.tipo_pessoa,
         documento: proprietario.documento ?? '',
         telefone: proprietario.telefone ?? '',
-        email: proprietario.email ?? '', // null quando placeholder — vem como '' aqui
+        email: proprietario.email ?? '',
     };
 
-    function handleSubmit(dados: ProprietarioFormData) {
+    function handleSubmit(dados: PessoaFormData) {
         setProcessing(true);
         router.put(`/proprietarios/${proprietario.vinculo_id}`, dados, {
             onSuccess: () => setProcessing(false),
@@ -64,8 +63,10 @@ export default function EditarProprietario({ proprietario, errors = {} }: Props)
                     </Button>
                 </PageHeader>
 
-                <ProprietarioForm
+                <PessoaForm
                     dados={dadosIniciais}
+                    titulo="Dados do proprietário"
+                    avisoEmailTexto={AVISO_EMAIL_PROPRIETARIO}
                     errors={errors}
                     processing={processing}
                     onSubmit={handleSubmit}
