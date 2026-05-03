@@ -12,7 +12,6 @@ use App\Http\Controllers\Admin\AdminTemplateController;
 use App\Http\Controllers\Admin\AdminTwoFactorChallengeController;
 use App\Http\Controllers\Admin\AdminUsuarioController;
 use App\Http\Controllers\ComprovanteController;
-use App\Http\Controllers\CondominioController;
 use App\Http\Controllers\ContratoController;
 use App\Http\Controllers\ContratoInquilinoController;
 use App\Http\Controllers\ContratoReajusteController;
@@ -105,10 +104,6 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.a
         Route::post('imoveis/{imovel}/titularidades', [TitularidadeController::class, 'store']);
         Route::put('imoveis/{imovel}/titularidades/{titularidade}', [TitularidadeController::class, 'update']);
         Route::delete('imoveis/{imovel}/titularidades/{titularidade}', [TitularidadeController::class, 'destroy']);
-
-        // Condomínio do imóvel (sub-recurso 1:1)
-        Route::put('imoveis/{imovel}/condominio', [CondominioController::class, 'upsert'])->name('imoveis.condominio.upsert');
-        Route::delete('imoveis/{imovel}/condominio', [CondominioController::class, 'destroy'])->name('imoveis.condominio.destroy');
 
         // Entidades externas (CRUD próprio + endpoint inline para o dialog do imóvel)
         Route::get('entidades-externas', [EntidadeExternaController::class, 'index'])->name('entidades-externas.index');

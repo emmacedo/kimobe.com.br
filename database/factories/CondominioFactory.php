@@ -25,8 +25,6 @@ class CondominioFactory extends Factory
             'tenant_id' => Tenant::factory(),
             'imovel_id' => Imovel::factory(),
             'entidade_externa_id' => null,
-            'dia_vencimento' => $this->faker->numberBetween(1, 28),
-            'valor' => $this->faker->randomFloat(2, 100, 2500),
             'acesso_login' => $this->faker->optional(0.5)->userName(),
             'acesso_senha' => $this->faker->optional(0.5)->password(8, 12),
             'acesso_descricao' => $this->faker->optional(0.3)->sentence(),

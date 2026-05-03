@@ -77,8 +77,6 @@ export default function EditarImovel({
         condominio: imovel.condominio
             ? {
                   entidade_externa_id: imovel.condominio.entidade_externa_id,
-                  dia_vencimento: imovel.condominio.dia_vencimento,
-                  valor: imovel.condominio.valor ? parseFloat(imovel.condominio.valor) : null,
                   acesso_login: imovel.condominio.acesso_login ?? '',
                   acesso_senha: imovel.condominio.acesso_senha ?? '',
                   acesso_descricao: imovel.condominio.acesso_descricao ?? '',

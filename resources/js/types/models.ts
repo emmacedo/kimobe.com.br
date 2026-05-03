@@ -189,8 +189,6 @@ export interface Condominio {
     id: number;
     imovel_id: number;
     entidade_externa_id: number | null;
-    dia_vencimento: number | null;
-    valor: string | null;
     acesso_login: string | null;
     acesso_senha: string | null;
     acesso_descricao: string | null;

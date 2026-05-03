@@ -20,8 +20,6 @@ import type { EntidadeExterna } from '@/types/models';
 
 export type CondominioFormData = {
     entidade_externa_id: number | null;
-    dia_vencimento: number | null;
-    valor: number | null;
     acesso_login: string;
     acesso_senha: string;
     acesso_descricao: string;
@@ -29,8 +27,6 @@ export type CondominioFormData = {
 
 export const condominioVazio: CondominioFormData = {
     entidade_externa_id: null,
-    dia_vencimento: null,
-    valor: null,
     acesso_login: '',
     acesso_senha: '',
     acesso_descricao: '',
@@ -108,16 +104,6 @@ export function ImovelForm({
     function setNumericField(key: keyof ImovelFormData, value: string) {
         const num = value === '' ? null : parseInt(value, 10);
         setField(key, (isNaN(num as number) ? null : num) as any);
-    }
-
-    function setDiaVencimento(value: string) {
-        if (value === '') {
-            setCondominioField('dia_vencimento', null);
-            return;
-        }
-        const num = parseInt(value, 10);
-        if (isNaN(num)) return;
-        setCondominioField('dia_vencimento', Math.max(1, Math.min(31, num)));
     }
 
     function handleAddressFound(endereco: { logradouro: string; bairro: string; localidade: string; uf: string }) {
@@ -392,43 +378,18 @@ export function ImovelForm({
                     Condomínio <span className="text-xs font-normal text-[#8A918E]">(opcional)</span>
                 </h2>
                 <div className="space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-12">
-                        <div className="sm:col-span-3">
-                            <Label htmlFor="dia_vencimento">Dia de vencimento</Label>
-                            <Input
-                                id="dia_vencimento"
-                                type="number"
-                                min={1}
-                                max={31}
-                                step={1}
-                                value={form.condominio.dia_vencimento ?? ''}
-                                onChange={(e) => setDiaVencimento(e.target.value)}
-                                placeholder="1 a 31"
-                                className="bg-white border-[#D8DCDA]"
-                            />
-                            <InputError message={errors['condominio.dia_vencimento']} />
-                        </div>
-                        <div className="sm:col-span-4">
-                            <Label htmlFor="valor_condominio">Valor mensal</Label>
-                            <InputMoeda
-                                value={form.condominio.valor}
-                                onChange={(v) => setCondominioField('valor', v)}
-                            />
-                            <InputError message={errors['condominio.valor']} />
-                        </div>
-                        <div className="sm:col-span-5">
-                            <Label>Administradora</Label>
-                            <SeletorEntidadeExterna
-                                entidades={entidadesExternas}
-                                value={form.condominio.entidade_externa_id}
-                                onChange={(id) => setCondominioField('entidade_externa_id', id)}
-                                onEntidadeCriada={handleEntidadeCriada}
-                                tipoCriacao="administradora_condominio"
-                                placeholder="Selecione a administradora"
-                                tituloDialog="Cadastrar nova administradora"
-                            />
-                            <InputError message={errors['condominio.entidade_externa_id']} />
-                        </div>
+                    <div>
+                        <Label>Administradora</Label>
+                        <SeletorEntidadeExterna
+                            entidades={entidadesExternas}
+                            value={form.condominio.entidade_externa_id}
+                            onChange={(id) => setCondominioField('entidade_externa_id', id)}
+                            onEntidadeCriada={handleEntidadeCriada}
+                            tipoCriacao="administradora_condominio"
+                            placeholder="Selecione a administradora"
+                            tituloDialog="Cadastrar nova administradora"
+                        />
+                        <InputError message={errors['condominio.entidade_externa_id']} />
                     </div>
 
                     {/* Sub-bloco: dados de acesso (opcional) */}

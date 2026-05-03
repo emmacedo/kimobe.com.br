@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'imovel_id', 'entidade_externa_id',
-    'dia_vencimento', 'valor',
     'acesso_login', 'acesso_senha', 'acesso_descricao',
 ])]
 class Condominio extends Model
@@ -21,17 +20,6 @@ class Condominio extends Model
     use BelongsToTenant, HasFactory, SoftDeletes;
 
     protected $table = 'condominios';
-
-    /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'dia_vencimento' => 'integer',
-            'valor' => 'decimal:2',
-        ];
-    }
 
     public function imovel(): BelongsTo
     {
