@@ -1,1 +1,0 @@
-import{m as e,u as t}from"./jsx-runtime-5GUz_AeQ.js";var n=e(t(),1);function r(e){let t=n.useRef({value:e,previous:e});return n.useMemo(()=>(t.current.value!==e&&(t.current.previous=t.current.value,t.current.value=e),t.current.previous),[e])}export{r as t};
