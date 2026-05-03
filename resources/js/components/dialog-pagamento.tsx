@@ -96,7 +96,7 @@ export function DialogPagamento({ open, onOpenChange, cobranca }: Props) {
             return;
         }
         setSaving(true);
-        router.patch(`/financeiro/cobrancas/${cobranca.id}/pagamento`, {
+        router.patch(`/financeiro/faturas/${cobranca.id}/pagamento`, {
             data_pagamento: dataPagamento,
             metodo_pagamento: metodoPagamento,
             valor_pago: valorFinal,

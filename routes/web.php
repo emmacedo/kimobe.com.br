@@ -11,27 +11,26 @@ use App\Http\Controllers\Admin\AdminPaginaController;
 use App\Http\Controllers\Admin\AdminTemplateController;
 use App\Http\Controllers\Admin\AdminTwoFactorChallengeController;
 use App\Http\Controllers\Admin\AdminUsuarioController;
-use App\Http\Controllers\AdministradoraController;
-use App\Http\Controllers\CobrancaComprovanteController;
-use App\Http\Controllers\CobrancaController;
-use App\Http\Controllers\CobrancaItemExtraController;
+use App\Http\Controllers\ComprovanteController;
 use App\Http\Controllers\CondominioController;
 use App\Http\Controllers\ContratoController;
 use App\Http\Controllers\ContratoInquilinoController;
-use App\Http\Controllers\ContratoResponsabilidadeController;
+use App\Http\Controllers\ContratoReajusteController;
 use App\Http\Controllers\DadosBancariosController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailLogController;
 use App\Http\Controllers\EmailTrackingController;
+use App\Http\Controllers\EntidadeExternaController;
+use App\Http\Controllers\FaturaController;
 use App\Http\Controllers\FiadorController;
 use App\Http\Controllers\ImovelController;
 use App\Http\Controllers\ImovelFotoController;
 use App\Http\Controllers\InquilinoController;
+use App\Http\Controllers\ItemCobrancaController;
 use App\Http\Controllers\PaginaInstitucionalController;
 use App\Http\Controllers\ProprietarioController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\RegistroController;
-use App\Http\Controllers\RepasseComprovanteController;
 use App\Http\Controllers\RepasseController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\TenantSelectionController;
@@ -111,14 +110,14 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.a
         Route::put('imoveis/{imovel}/condominio', [CondominioController::class, 'upsert'])->name('imoveis.condominio.upsert');
         Route::delete('imoveis/{imovel}/condominio', [CondominioController::class, 'destroy'])->name('imoveis.condominio.destroy');
 
-        // Administradoras (CRUD próprio + endpoint inline para o dialog do imóvel)
-        Route::get('administradoras', [AdministradoraController::class, 'index'])->name('administradoras.index');
-        Route::get('administradoras/criar', [AdministradoraController::class, 'create'])->name('administradoras.create');
-        Route::post('administradoras', [AdministradoraController::class, 'store'])->name('administradoras.store');
-        Route::post('administradoras/inline', [AdministradoraController::class, 'storeInline'])->name('administradoras.inline');
-        Route::get('administradoras/{administradora}/editar', [AdministradoraController::class, 'edit'])->name('administradoras.edit');
-        Route::put('administradoras/{administradora}', [AdministradoraController::class, 'update'])->name('administradoras.update');
-        Route::delete('administradoras/{administradora}', [AdministradoraController::class, 'destroy'])->name('administradoras.destroy');
+        // Entidades externas (CRUD próprio + endpoint inline para o dialog do imóvel)
+        Route::get('entidades-externas', [EntidadeExternaController::class, 'index'])->name('entidades-externas.index');
+        Route::get('entidades-externas/criar', [EntidadeExternaController::class, 'create'])->name('entidades-externas.create');
+        Route::post('entidades-externas', [EntidadeExternaController::class, 'store'])->name('entidades-externas.store');
+        Route::post('entidades-externas/inline', [EntidadeExternaController::class, 'storeInline'])->name('entidades-externas.inline');
+        Route::get('entidades-externas/{entidadeExterna}/editar', [EntidadeExternaController::class, 'edit'])->name('entidades-externas.edit');
+        Route::put('entidades-externas/{entidadeExterna}', [EntidadeExternaController::class, 'update'])->name('entidades-externas.update');
+        Route::delete('entidades-externas/{entidadeExterna}', [EntidadeExternaController::class, 'destroy'])->name('entidades-externas.destroy');
 
         // Proprietários (CRUD + endpoints JSON para autocomplete e criação inline)
         // Rotas estáticas/específicas ANTES das parametrizadas para evitar conflito.
@@ -156,11 +155,6 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.a
         Route::patch('contratos/{contrato}/encerrar', [ContratoController::class, 'encerrar'])->name('contratos.encerrar');
         Route::patch('contratos/{contrato}/cancelar', [ContratoController::class, 'cancelar'])->name('contratos.cancelar');
 
-        // Responsabilidades
-        Route::post('contratos/{contrato}/responsabilidades', [ContratoResponsabilidadeController::class, 'store']);
-        Route::put('contratos/{contrato}/responsabilidades/{responsabilidade}', [ContratoResponsabilidadeController::class, 'update']);
-        Route::delete('contratos/{contrato}/responsabilidades/{responsabilidade}', [ContratoResponsabilidadeController::class, 'destroy']);
-
         // Fiadores
         Route::post('contratos/{contrato}/fiadores', [FiadorController::class, 'store']);
         Route::put('contratos/{contrato}/fiadores/{fiador}', [FiadorController::class, 'update']);
@@ -170,6 +164,15 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.a
         Route::post('contratos/{contrato}/inquilinos', [ContratoInquilinoController::class, 'store'])->name('contratos.inquilinos.store');
         Route::put('contratos/{contrato}/inquilinos/{contratoInquilino}', [ContratoInquilinoController::class, 'update'])->name('contratos.inquilinos.update');
         Route::delete('contratos/{contrato}/inquilinos/{contratoInquilino}', [ContratoInquilinoController::class, 'destroy'])->name('contratos.inquilinos.destroy');
+
+        // Itens de cobrança do contrato (modelo unificado)
+        Route::get('contratos/{contrato}/itens-cobranca', [ItemCobrancaController::class, 'index'])->name('itens-cobranca.index');
+        Route::post('contratos/{contrato}/itens-cobranca', [ItemCobrancaController::class, 'store'])->name('itens-cobranca.store');
+        Route::patch('itens-cobranca/{itemCobranca}', [ItemCobrancaController::class, 'update'])->name('itens-cobranca.update');
+        Route::delete('itens-cobranca/{itemCobranca}', [ItemCobrancaController::class, 'destroy'])->name('itens-cobranca.destroy');
+
+        // Reajustes do contrato (Camada 3 — auditoria estruturada)
+        Route::post('contratos/{contrato}/reajustes', [ContratoReajusteController::class, 'store'])->name('contratos.reajustes.store');
 
         // Inquilinos (CRUD próprio + endpoints JSON)
         Route::get('inquilinos', [InquilinoController::class, 'index'])->name('inquilinos.index');
@@ -193,30 +196,23 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.a
     // ----------------------------------------------------------------
     // Gestão: apenas admin (rotas estáticas ANTES das parametrizadas)
     Route::middleware(['role:admin'])->group(function () {
-        Route::get('financeiro/cobrancas/criar', [CobrancaController::class, 'create'])->name('cobrancas.create');
-        Route::post('financeiro/cobrancas', [CobrancaController::class, 'store'])->name('cobrancas.store');
-        Route::get('financeiro/cobrancas/preview-mensais', [CobrancaController::class, 'previewMensais'])->name('cobrancas.preview-mensais');
-        Route::post('financeiro/cobrancas/gerar-mensais', [CobrancaController::class, 'gerarMensais'])->name('cobrancas.gerar-mensais');
-        Route::patch('financeiro/cobrancas/{cobranca}/cancelar', [CobrancaController::class, 'cancelar'])->name('cobrancas.cancelar');
-        Route::patch('financeiro/cobrancas/{cobranca}/pagamento', [CobrancaController::class, 'registrarPagamento'])->name('cobrancas.pagamento');
-
-        // Itens extras
-        Route::post('financeiro/cobrancas/{cobranca}/itens-extras', [CobrancaItemExtraController::class, 'store']);
-        Route::put('financeiro/cobrancas/{cobranca}/itens-extras/{item}', [CobrancaItemExtraController::class, 'update']);
-        Route::delete('financeiro/cobrancas/{cobranca}/itens-extras/{item}', [CobrancaItemExtraController::class, 'destroy']);
+        Route::get('financeiro/faturas/criar', [FaturaController::class, 'create'])->name('faturas.create');
+        Route::post('financeiro/faturas', [FaturaController::class, 'store'])->name('faturas.store');
+        Route::get('financeiro/faturas/preview-mensais', [FaturaController::class, 'previewMensais'])->name('faturas.preview-mensais');
+        Route::post('financeiro/faturas/gerar-mensais', [FaturaController::class, 'gerarMensais'])->name('faturas.gerar-mensais');
+        Route::patch('financeiro/faturas/{fatura}/cancelar', [FaturaController::class, 'cancelar'])->name('faturas.cancelar');
+        Route::patch('financeiro/faturas/{fatura}/pagamento', [FaturaController::class, 'registrarPagamento'])->name('faturas.pagamento');
     });
 
-    // Comprovantes de cobrança: admin e inquilino
+    // Upload de comprovante para fatura (admin e inquilino)
     Route::middleware(['role:admin,inquilino'])->group(function () {
-        Route::post('financeiro/cobrancas/{cobranca}/comprovantes', [CobrancaComprovanteController::class, 'store']);
-        Route::patch('financeiro/cobrancas/{cobranca}/comprovantes/{comprovante}', [CobrancaComprovanteController::class, 'update']);
-        Route::delete('financeiro/cobrancas/{cobranca}/comprovantes/{comprovante}', [CobrancaComprovanteController::class, 'destroy']);
+        Route::post('financeiro/faturas/{fatura}/comprovantes', [ComprovanteController::class, 'storeForFatura']);
     });
 
-    // Visualização de cobranças: todos os papéis (APÓS rotas estáticas para evitar conflito com {cobranca})
+    // Visualização de faturas: todos os papéis (APÓS rotas estáticas para evitar conflito com {fatura})
     Route::middleware(['role:admin,proprietario,inquilino'])->group(function () {
-        Route::get('financeiro/cobrancas', [CobrancaController::class, 'index'])->name('cobrancas.index');
-        Route::get('financeiro/cobrancas/{cobranca}', [CobrancaController::class, 'show'])->name('cobrancas.show');
+        Route::get('financeiro/faturas', [FaturaController::class, 'index'])->name('faturas.index');
+        Route::get('financeiro/faturas/{fatura}', [FaturaController::class, 'show'])->name('faturas.show');
     });
 
     // ----------------------------------------------------------------
@@ -228,10 +224,13 @@ Route::middleware(['auth', 'verified', 'tenant', 'tenant.ativo', 'subscription.a
         Route::patch('financeiro/repasses/{repasse}/confirmar', [RepasseController::class, 'confirmar'])->name('repasses.confirmar');
         Route::patch('financeiro/repasses/{repasse}/cancelar', [RepasseController::class, 'cancelar'])->name('repasses.cancelar');
 
-        // Comprovantes de repasse
-        Route::post('financeiro/repasses/{repasse}/comprovantes', [RepasseComprovanteController::class, 'store']);
-        Route::patch('financeiro/repasses/{repasse}/comprovantes/{comprovante}', [RepasseComprovanteController::class, 'update']);
-        Route::delete('financeiro/repasses/{repasse}/comprovantes/{comprovante}', [RepasseComprovanteController::class, 'destroy']);
+        // Upload de comprovante para repasse e item de cobrança (apenas admin)
+        Route::post('financeiro/repasses/{repasse}/comprovantes', [ComprovanteController::class, 'storeForRepasse']);
+        Route::post('itens-cobranca/{itemCobranca}/comprovantes', [ComprovanteController::class, 'storeForItemCobranca']);
+
+        // Edição/remoção de comprovante (sem importar owner)
+        Route::patch('comprovantes/{comprovante}', [ComprovanteController::class, 'update'])->name('comprovantes.update');
+        Route::delete('comprovantes/{comprovante}', [ComprovanteController::class, 'destroy'])->name('comprovantes.destroy');
     });
 
     // Visualização de repasses: admin e proprietário (APÓS rotas estáticas)

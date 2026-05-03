@@ -66,7 +66,7 @@ type ContratoResumo = {
     inquilino: { user: { name: string } };
 };
 
-type AdministradoraResumo = {
+type EntidadeExternaResumo = {
     id: number;
     nome: string;
     cpf_cnpj: string | null;
@@ -77,13 +77,13 @@ type AdministradoraResumo = {
 
 type CondominioResumo = {
     id: number;
-    administradora_id: number | null;
+    entidade_externa_id: number | null;
     dia_vencimento: number | null;
     valor: string | null;
     acesso_login: string | null;
     acesso_senha: string | null;
     acesso_descricao: string | null;
-    administradora: AdministradoraResumo | null;
+    entidade_externa: EntidadeExternaResumo | null;
 };
 
 type ImovelData = {
@@ -283,29 +283,29 @@ export default function MostrarImovel({ imovel }: Props) {
                                             </p>
                                         </div>
                                     )}
-                                    {imovel.condominio.administradora && (
+                                    {imovel.condominio.entidade_externa && (
                                         <div>
                                             <p className="text-xs text-[#8A918E]">Administradora</p>
                                             <Link
-                                                href={`/administradoras/${imovel.condominio.administradora.id}/editar`}
+                                                href={`/entidades-externas/${imovel.condominio.entidade_externa.id}/editar`}
                                                 className="text-sm font-medium text-[#0A4F5C] hover:underline"
                                             >
-                                                {imovel.condominio.administradora.nome}
+                                                {imovel.condominio.entidade_externa.nome}
                                             </Link>
-                                            {imovel.condominio.administradora.telefone && (
+                                            {imovel.condominio.entidade_externa.telefone && (
                                                 <p className="mt-0.5 flex items-center gap-1 text-xs text-[#6B7370]">
                                                     <Phone className="h-3 w-3" />
-                                                    {formataTelefone(imovel.condominio.administradora.telefone)}
+                                                    {formataTelefone(imovel.condominio.entidade_externa.telefone)}
                                                 </p>
                                             )}
-                                            {imovel.condominio.administradora.cpf_cnpj && (
+                                            {imovel.condominio.entidade_externa.cpf_cnpj && (
                                                 <p className="mt-0.5 font-mono text-xs text-[#6B7370]">
-                                                    {formataCpfCnpj(imovel.condominio.administradora.cpf_cnpj)}
+                                                    {formataCpfCnpj(imovel.condominio.entidade_externa.cpf_cnpj)}
                                                 </p>
                                             )}
-                                            {imovel.condominio.administradora.contato_interno_nome && (
+                                            {imovel.condominio.entidade_externa.contato_interno_nome && (
                                                 <p className="mt-0.5 text-xs text-[#6B7370]">
-                                                    Contato: {imovel.condominio.administradora.contato_interno_nome}
+                                                    Contato: {imovel.condominio.entidade_externa.contato_interno_nome}
                                                 </p>
                                             )}
                                         </div>

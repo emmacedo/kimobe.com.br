@@ -6,16 +6,19 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { ContratoForm, type ContratoFormData } from '@/components/contrato-form';
 import { GerenciadorFiadores } from '@/components/gerenciador-fiadores';
 import { GerenciadorInquilinos } from '@/components/gerenciador-inquilinos';
-import { GerenciadorResponsabilidades } from '@/components/gerenciador-responsabilidades';
+import { GerenciadorItensCobranca } from '@/components/gerenciador-itens-cobranca';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
+import type { EntidadeExterna, ItemCobranca } from '@/types/models';
 
 type Props = {
     contrato: any;
+    itensCobranca: ItemCobranca[];
+    entidadesExternas: EntidadeExterna[];
     errors?: Record<string, string>;
 };
 
-export default function EditarContrato({ contrato, errors = {} }: Props) {
+export default function EditarContrato({ contrato, itensCobranca, entidadesExternas, errors = {} }: Props) {
     const { flash } = usePage().props as any;
     const [processing, setProcessing] = useState(false);
     const [confirmSair, setConfirmSair] = useState(false);
@@ -103,10 +106,11 @@ export default function EditarContrato({ contrato, errors = {} }: Props) {
                     inquilinos={contrato.inquilinos ?? []}
                 />
 
-                {/* Responsabilidades financeiras */}
-                <GerenciadorResponsabilidades
+                {/* Itens de cobrança (modelo unificado: aluguel, condomínio, IPTU, avulsos, etc.) */}
+                <GerenciadorItensCobranca
                     contratoId={contrato.id}
-                    responsabilidades={contrato.responsabilidades ?? []}
+                    itensIniciais={itensCobranca}
+                    entidadesExternas={entidadesExternas}
                 />
 
                 {/* Fiadores (só aparece se tipo_garantia é fiador) */}

@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Administradora;
 use App\Models\Condominio;
+use App\Models\EntidadeExterna;
 use App\Models\Imovel;
 use App\Models\Tenant;
 
@@ -32,13 +32,13 @@ test('imóvel pode ser criado sem condomínio', function () {
 
 test('imóvel pode ser criado com condomínio completo', function () {
     [$tenant, $user] = setupTenantComAdmin();
-    $adm = Administradora::factory()->create(['tenant_id' => $tenant->id]);
+    $adm = EntidadeExterna::factory()->create(['tenant_id' => $tenant->id]);
 
     $response = $this->actingAs($user)
         ->withSession(['tenant_id' => $tenant->id])
         ->post('/imoveis', dadosImovelCond([
             'condominio' => [
-                'administradora_id' => $adm->id,
+                'entidade_externa_id' => $adm->id,
                 'dia_vencimento' => 10,
                 'valor' => '850,50',
                 'acesso_login' => 'cond123',
@@ -50,7 +50,7 @@ test('imóvel pode ser criado com condomínio completo', function () {
     $response->assertSessionHasNoErrors();
     $imovel = Imovel::where('tenant_id', $tenant->id)->first();
     expect($imovel->condominio)->not->toBeNull();
-    expect($imovel->condominio->administradora_id)->toBe($adm->id);
+    expect($imovel->condominio->entidade_externa_id)->toBe($adm->id);
     expect($imovel->condominio->dia_vencimento)->toBe(10);
     expect((float) $imovel->condominio->valor)->toBe(850.50);
     expect($imovel->condominio->acesso_senha)->toBe('senha-secreta');
@@ -63,7 +63,7 @@ test('condomínio com todos os campos vazios não é criado', function () {
         ->withSession(['tenant_id' => $tenant->id])
         ->post('/imoveis', dadosImovelCond([
             'condominio' => [
-                'administradora_id' => null,
+                'entidade_externa_id' => null,
                 'dia_vencimento' => null,
                 'valor' => null,
                 'acesso_login' => '',
@@ -89,18 +89,18 @@ test('dia de vencimento fora do intervalo 1-31 falha', function () {
     $response->assertSessionHasErrors(['condominio.dia_vencimento']);
 });
 
-test('administradora de outro tenant é rejeitada', function () {
+test('entidade externa de outro tenant é rejeitada', function () {
     [$tenant, $user] = setupTenantComAdmin();
     $outroTenant = Tenant::factory()->create();
-    $admOutra = Administradora::factory()->create(['tenant_id' => $outroTenant->id]);
+    $admOutra = EntidadeExterna::factory()->create(['tenant_id' => $outroTenant->id]);
 
     $response = $this->actingAs($user)
         ->withSession(['tenant_id' => $tenant->id])
         ->post('/imoveis', dadosImovelCond([
-            'condominio' => ['administradora_id' => $admOutra->id],
+            'condominio' => ['entidade_externa_id' => $admOutra->id],
         ]));
 
-    $response->assertSessionHasErrors(['condominio.administradora_id']);
+    $response->assertSessionHasErrors(['condominio.entidade_externa_id']);
 });
 
 test('update adiciona condomínio a imóvel sem condomínio', function () {
@@ -155,7 +155,7 @@ test('update remove condomínio quando todos os campos ficam vazios', function (
         ->withSession(['tenant_id' => $tenant->id])
         ->put("/imoveis/{$imovel->id}", dadosImovelCond([
             'condominio' => [
-                'administradora_id' => null,
+                'entidade_externa_id' => null,
                 'dia_vencimento' => null,
                 'valor' => null,
                 'acesso_login' => '',
@@ -197,7 +197,7 @@ test('remoção via update faz soft delete (não hard delete)', function () {
         ->withSession(['tenant_id' => $tenant->id])
         ->put("/imoveis/{$imovel->id}", dadosImovelCond([
             'condominio' => [
-                'administradora_id' => null,
+                'entidade_externa_id' => null,
                 'dia_vencimento' => null,
                 'valor' => null,
                 'acesso_login' => '',

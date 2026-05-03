@@ -106,17 +106,6 @@ export interface Titularidade {
     dados_bancarios: DadosBancarios | null;
 }
 
-export interface ContratoResponsabilidade {
-    id: number;
-    contrato_id: number;
-    descricao: string;
-    responsavel: 'proprietario' | 'inquilino';
-    valor: string | null;
-    periodicidade: 'mensal' | 'anual' | 'avulso';
-    predefinido: boolean;
-    observacoes: string | null;
-}
-
 export interface Fiador {
     id: number;
     contrato_id: number;
@@ -136,9 +125,51 @@ export interface Fiador {
     uf: string;
 }
 
-export interface Administradora {
+export type ParteFinanceira = 'inquilino' | 'proprietario' | 'administradora';
+
+export type TipoItemCobranca = 'recorrente' | 'parcelado' | 'avulso';
+
+export type PeriodicidadeItemCobranca = 'mensal' | 'bimestral' | 'trimestral' | 'semestral' | 'anual';
+
+export type StatusItemCobranca = 'pendente' | 'conciliado' | 'cancelado';
+
+export interface ItemCobranca {
+    id: number;
+    parent_item_id: number | null;
+    contrato_id: number;
+    descricao: string;
+    pagante: ParteFinanceira;
+    recebedor: ParteFinanceira;
+    entidade_externa_id: number | null;
+    entidade_externa?: { id: number; nome: string; tipo: string } | null;
+    tipo: TipoItemCobranca;
+    periodicidade: PeriodicidadeItemCobranca | null;
+    num_parcela: number | null;
+    num_parcelas_total: number | null;
+    valor_unitario: string;
+    mes_referencia: string;
+    visivel_inquilino: boolean;
+    status: StatusItemCobranca;
+    fatura_id: number | null;
+    observacoes: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export type TipoEntidadeExterna =
+    | 'administradora_condominio'
+    | 'sindico'
+    | 'prefeitura'
+    | 'seguradora'
+    | 'prestador_servico'
+    | 'empresa'
+    | 'pessoa_fisica'
+    | 'outro';
+
+export interface EntidadeExterna {
     id: number;
     nome: string;
+    tipo: TipoEntidadeExterna;
     cpf_cnpj: string | null;
     telefone: string | null;
     email: string | null;
@@ -157,13 +188,13 @@ export interface Administradora {
 export interface Condominio {
     id: number;
     imovel_id: number;
-    administradora_id: number | null;
+    entidade_externa_id: number | null;
     dia_vencimento: number | null;
     valor: string | null;
     acesso_login: string | null;
     acesso_senha: string | null;
     acesso_descricao: string | null;
-    administradora?: Administradora | null;
+    entidade_externa?: EntidadeExterna | null;
 }
 
 export interface Imovel {

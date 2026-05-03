@@ -7,7 +7,7 @@ import { GerenciadorTitulares, type TitularItem } from '@/components/gerenciador
 import { ImovelForm, condominioVazio, type ImovelFormData } from '@/components/imovel-form';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Administradora } from '@/types/models';
+import type { EntidadeExterna } from '@/types/models';
 
 const dadosIniciais: ImovelFormData = {
     cep: '',
@@ -32,10 +32,10 @@ const dadosIniciais: ImovelFormData = {
 };
 
 type Props = {
-    administradoras: Administradora[];
+    entidadesExternas: EntidadeExterna[];
 };
 
-export default function CriarImovel({ administradoras }: Props) {
+export default function CriarImovel({ entidadesExternas }: Props) {
     const { errors } = usePage().props as any;
     const [processing, setProcessing] = useState(false);
     const [confirmSair, setConfirmSair] = useState(false);
@@ -105,7 +105,7 @@ export default function CriarImovel({ administradoras }: Props) {
 
                 <ImovelForm
                     dados={dadosIniciais}
-                    administradoras={administradoras}
+                    entidadesExternas={entidadesExternas}
                     errors={errors ?? {}}
                     processing={processing}
                     onSubmit={handleSubmit}

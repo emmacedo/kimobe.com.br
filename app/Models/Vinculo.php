@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCreator;
 use App\Services\TenantService;
 use Database\Factories\VinculoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -9,12 +10,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
-#[Fillable(['user_id', 'tenant_id', 'papel', 'status'])]
+#[Fillable(['user_id', 'tenant_id', 'papel', 'status', 'criado_por_user_id', 'atualizado_por_user_id'])]
 class Vinculo extends Model
 {
     /** @use HasFactory<VinculoFactory> */
-    use HasFactory;
+    use BelongsToCreator, HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['status', 'papel'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     /**
      * Nome da tabela associada ao model.

@@ -6,18 +6,19 @@ import { Button } from '@/components/ui/button';
 
 type Comprovante = {
     id: number;
-    caminho: string;
+    arquivo: string;
     url: string;
-    nome_arquivo: string;
+    nome_original: string;
     mime_type: string;
     tamanho_bytes: number;
+    tipo: string;
     observacoes: string | null;
     created_at: string;
 };
 
 type Props = {
     entidadeId: number;
-    entidadeTipo: 'cobranca' | 'repasse';
+    entidadeTipo: 'fatura' | 'repasse' | 'item-cobranca';
     comprovantes: Comprovante[];
     readOnly?: boolean;
 };
@@ -46,9 +47,16 @@ export function GerenciadorComprovantes({ entidadeId, entidadeTipo, comprovantes
     const [deleteLoading, setDeleteLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const basePath = entidadeTipo === 'cobranca'
-        ? `/financeiro/cobrancas/${entidadeId}/comprovantes`
-        : `/financeiro/repasses/${entidadeId}/comprovantes`;
+    const uploadPath = (() => {
+        switch (entidadeTipo) {
+            case 'fatura':
+                return `/financeiro/faturas/${entidadeId}/comprovantes`;
+            case 'repasse':
+                return `/financeiro/repasses/${entidadeId}/comprovantes`;
+            case 'item-cobranca':
+                return `/itens-cobranca/${entidadeId}/comprovantes`;
+        }
+    })();
 
     async function handleUpload(files: FileList | null) {
         if (!files || files.length === 0) return;
@@ -68,7 +76,7 @@ export function GerenciadorComprovantes({ entidadeId, entidadeTipo, comprovantes
             formData.append('arquivo', file);
 
             try {
-                const response = await fetch(basePath, {
+                const response = await fetch(uploadPath, {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': getCsrfToken(), Accept: 'application/json' },
                     body: formData,
@@ -89,7 +97,7 @@ export function GerenciadorComprovantes({ entidadeId, entidadeTipo, comprovantes
         if (!deleteTarget) return;
         setDeleteLoading(true);
         try {
-            await fetch(`${basePath}/${deleteTarget.id}`, {
+            await fetch(`/comprovantes/${deleteTarget.id}`, {
                 method: 'DELETE',
                 headers: { 'X-CSRF-TOKEN': getCsrfToken(), Accept: 'application/json' },
             });
@@ -131,7 +139,7 @@ export function GerenciadorComprovantes({ entidadeId, entidadeTipo, comprovantes
                                     <FileText className="h-4 w-4 shrink-0 text-[#A83232]" />
                                 )}
                                 <div className="min-w-0">
-                                    <p className="truncate text-sm text-[#3A4240]">{c.nome_arquivo}</p>
+                                    <p className="truncate text-sm text-[#3A4240]">{c.nome_original}</p>
                                     <p className="text-[10px] text-[#8A918E]">{formatBytes(c.tamanho_bytes)} · {formatDate(c.created_at)}</p>
                                 </div>
                             </div>

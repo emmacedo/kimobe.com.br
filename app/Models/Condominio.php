@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'imovel_id', 'administradora_id',
+    'imovel_id', 'entidade_externa_id',
     'dia_vencimento', 'valor',
     'acesso_login', 'acesso_senha', 'acesso_descricao',
 ])]
@@ -38,8 +38,8 @@ class Condominio extends Model
         return $this->belongsTo(Imovel::class);
     }
 
-    public function administradora(): BelongsTo
+    public function entidadeExterna(): BelongsTo
     {
-        return $this->belongsTo(Administradora::class);
+        return $this->belongsTo(EntidadeExterna::class);
     }
 }

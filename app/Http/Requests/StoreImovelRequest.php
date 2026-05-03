@@ -62,9 +62,9 @@ class StoreImovelRequest extends FormRequest
 
             // Condomínio (opcional — se presente, todos os campos são opcionais individualmente)
             'condominio' => ['nullable', 'array'],
-            'condominio.administradora_id' => [
+            'condominio.entidade_externa_id' => [
                 'nullable', 'integer',
-                Rule::exists('administradoras', 'id')->where('tenant_id', $tenantId)->whereNull('deleted_at'),
+                Rule::exists('entidades_externas', 'id')->where('tenant_id', $tenantId)->whereNull('deleted_at'),
             ],
             'condominio.dia_vencimento' => ['nullable', 'integer', 'between:1,31'],
             'condominio.valor' => ['nullable', 'numeric', 'min:0'],
@@ -159,7 +159,7 @@ class StoreImovelRequest extends FormRequest
             'area_m2.min' => 'A área deve ser maior ou igual a zero.',
             'valor_aluguel_sugerido.min' => 'O valor de aluguel deve ser maior ou igual a zero.',
             'observacoes.max' => 'As observações não podem ter mais de 5000 caracteres.',
-            'condominio.administradora_id.exists' => 'A administradora selecionada é inválida.',
+            'condominio.entidade_externa_id.exists' => 'A entidade externa selecionada é inválida.',
             'condominio.dia_vencimento.between' => 'O dia de vencimento do condomínio deve estar entre 1 e 31.',
             'condominio.valor.min' => 'O valor do condomínio deve ser maior ou igual a zero.',
             'condominio.acesso_descricao.max' => 'A descrição de acesso não pode ter mais de 5000 caracteres.',

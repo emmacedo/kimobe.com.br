@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCreator;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\ImovelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,17 +12,32 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
     'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf',
     'inscricao_iptu',
     'tipo', 'status', 'quartos', 'suites', 'banheiros', 'vagas_garagem',
     'andar', 'area_m2', 'valor_aluguel_sugerido', 'observacoes',
+    'criado_por_user_id', 'atualizado_por_user_id',
 ])]
 class Imovel extends Model
 {
     /** @use HasFactory<ImovelFactory> */
-    use BelongsToTenant, HasFactory, SoftDeletes;
+    use BelongsToCreator, BelongsToTenant, HasFactory, LogsActivity, SoftDeletes;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf',
+                'inscricao_iptu', 'tipo', 'status', 'quartos', 'suites', 'banheiros',
+                'vagas_garagem', 'andar', 'area_m2', 'valor_aluguel_sugerido', 'observacoes',
+            ])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     protected $table = 'imoveis';
 

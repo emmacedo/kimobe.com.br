@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreContratoRequest;
 use App\Http\Requests\UpdateContratoRequest;
 use App\Models\Contrato;
+use App\Models\EntidadeExterna;
 use App\Models\Garantia;
 use App\Models\Imovel;
+use App\Models\ItemCobranca;
 use App\Models\Vinculo;
+use App\Services\ContratoAuditoriaService;
 use App\Services\NotificacaoAdminService;
 use App\Services\TenantService;
 use App\Traits\ScopesPorPapel;
@@ -203,7 +206,7 @@ class ContratoController extends Controller
         }
 
         return redirect()->route('contratos.edit', $contrato)
-            ->with('success', 'Contrato criado com sucesso. Agora defina as responsabilidades financeiras.');
+            ->with('success', 'Contrato criado com sucesso.');
     }
 
     /**
@@ -220,12 +223,12 @@ class ContratoController extends Controller
             'imovel.titularidades.dadosBancarios',
             'inquilino.user',
             'inquilinos.vinculo.user',
-            'responsabilidades',
             'garantia',
             'fiadores',
+            'reajustes.alteradoPor:id,name',
         ]);
 
-        $cobrancas = $contrato->cobrancas()
+        $faturas = $contrato->faturas()
             ->orderBy('data_vencimento', 'desc')
             ->limit(5)
             ->get();
@@ -246,10 +249,17 @@ class ContratoController extends Controller
             }
         }
 
+        // Timeline de auditoria — visível apenas para admin e proprietário (não inquilino)
+        $timeline = null;
+        if (! $this->isInquilino() || $this->isAdmin()) {
+            $timeline = app(ContratoAuditoriaService::class)->montarTimeline($contrato);
+        }
+
         return Inertia::render('contratos/mostrar', [
             'contrato' => $contrato,
-            'cobrancasRecentes' => $cobrancas,
+            'faturasRecentes' => $faturas,
             'contatoAdmin' => $contatoAdmin,
+            'timelineAuditoria' => $timeline,
         ]);
     }
 
@@ -263,12 +273,22 @@ class ContratoController extends Controller
             'inquilino.user',
             'inquilinos.vinculo.user',
             'garantia',
-            'responsabilidades',
             'fiadores',
         ]);
 
+        // Apenas as séries (parent_item_id IS NULL) são listadas no gerenciador.
+        $itensSeries = ItemCobranca::where('contrato_id', $contrato->id)
+            ->whereNull('parent_item_id')
+            ->with('entidadeExterna:id,nome,tipo')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $entidadesExternas = EntidadeExterna::orderBy('nome')->get();
+
         return Inertia::render('contratos/editar', [
             'contrato' => $contrato,
+            'itensCobranca' => $itensSeries,
+            'entidadesExternas' => $entidadesExternas,
         ]);
     }
 

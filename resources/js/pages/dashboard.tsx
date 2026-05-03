@@ -46,7 +46,7 @@ function DashboardAdmin(props: any) {
     const cards = [
         { titulo: 'Receita mensal', valor: formataMoeda(props.receita_mensal ?? 0), cor: '#0A4F5C', icon: TrendingUp, sub: '' },
         { titulo: 'Taxa de ocupação', valor: `${props.taxa_ocupacao ?? 0}%`, cor: '#0A4F5C', icon: Building2, sub: `${props.imoveis_alugados ?? 0} de ${props.total_imoveis ?? 0} imóveis` },
-        { titulo: 'Inadimplência', valor: `${props.inadimplencia ?? 0}%`, cor: (props.inadimplencia ?? 0) > 0 ? '#A83232' : '#1B6B3A', icon: AlertCircle, sub: `${props.cobrancas_atrasadas ?? 0} atrasada(s)` },
+        { titulo: 'Inadimplência', valor: `${props.inadimplencia ?? 0}%`, cor: (props.inadimplencia ?? 0) > 0 ? '#A83232' : '#1B6B3A', icon: AlertCircle, sub: `${props.faturas_atrasadas ?? 0} atrasada(s)` },
         { titulo: 'Contratos ativos', valor: String(props.contratos_ativos ?? 0), cor: '#1E2D30', icon: CheckCircle, sub: '' },
     ];
 
@@ -89,7 +89,7 @@ function DashboardAdmin(props: any) {
                     <TableBody>
                         {(props.ultimas_movimentacoes ?? []).map((cob: any) => (
                             <TableRow key={cob.id} className="cursor-pointer border-b border-[#F7F8F7] hover:bg-[#FAFBFA]"
-                                onClick={() => router.visit(`/financeiro/cobrancas/${cob.id}`)}>
+                                onClick={() => router.visit(`/financeiro/faturas/${cob.id}`)}>
                                 <TableCell className="text-sm">{cob.contrato?.imovel?.complemento || `${cob.contrato?.imovel?.logradouro}, ${cob.contrato?.imovel?.numero}`}</TableCell>
                                 <TableCell className="text-sm text-[#3A4240]">{cob.contrato?.inquilino?.user?.name}</TableCell>
                                 <TableCell className="text-right font-mono text-sm font-medium">{formataMoeda(cob.valor_total)}</TableCell>
@@ -160,7 +160,7 @@ function DashboardProprietario(props: any) {
 }
 
 function DashboardInquilino(props: any) {
-    const proxima = props.proxima_cobranca;
+    const proxima = props.proxima_fatura;
     const diasRestantes = proxima ? Math.ceil((new Date(proxima.data_vencimento).getTime() - Date.now()) / (86400000)) : null;
 
     return (
@@ -175,7 +175,7 @@ function DashboardInquilino(props: any) {
                             {diasRestantes !== null && diasRestantes < 0 && <p className="mt-1 text-xs font-medium text-[#A83232]">Vencido há {Math.abs(diasRestantes)} dia(s)</p>}
                             {diasRestantes !== null && diasRestantes >= 0 && <p className="mt-1 text-xs text-[#1B6B3A]">{diasRestantes} dia(s) restante(s)</p>}
                         </div>
-                        <Link href={`/financeiro/cobrancas/${proxima.id}`} className="rounded-md bg-[#0A4F5C] px-4 py-2 text-sm text-white hover:bg-[#073B45]">Ver detalhes</Link>
+                        <Link href={`/financeiro/faturas/${proxima.id}`} className="rounded-md bg-[#0A4F5C] px-4 py-2 text-sm text-white hover:bg-[#073B45]">Ver detalhes</Link>
                     </div>
                 </div>
             ) : (
@@ -206,9 +206,9 @@ function DashboardInquilino(props: any) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {(props.ultimas_cobrancas ?? []).map((cob: any) => (
+                        {(props.ultimas_faturas ?? []).map((cob: any) => (
                             <TableRow key={cob.id} className="cursor-pointer border-b border-[#F7F8F7] hover:bg-[#FAFBFA]"
-                                onClick={() => router.visit(`/financeiro/cobrancas/${cob.id}`)}>
+                                onClick={() => router.visit(`/financeiro/faturas/${cob.id}`)}>
                                 <TableCell className="font-mono text-sm">{cob.referencia}</TableCell>
                                 <TableCell className="text-right font-mono text-sm font-medium">{formataMoeda(cob.valor_total)}</TableCell>
                                 <TableCell><StatusBadge status={cob.status} tipo="cobranca" /></TableCell>
@@ -216,7 +216,7 @@ function DashboardInquilino(props: any) {
                                 <TableCell className="text-xs text-[#6B7370]">{cob.data_pagamento ? formatDate(cob.data_pagamento) : '—'}</TableCell>
                             </TableRow>
                         ))}
-                        {(props.ultimas_cobrancas ?? []).length === 0 && (
+                        {(props.ultimas_faturas ?? []).length === 0 && (
                             <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-[#8A918E]">Nenhuma cobrança</TableCell></TableRow>
                         )}
                     </TableBody>

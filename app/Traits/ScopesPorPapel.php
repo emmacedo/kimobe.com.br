@@ -73,9 +73,9 @@ trait ScopesPorPapel
     }
 
     /**
-     * Filtra cobranças: admin vê todas, proprietário por imóvel, inquilino por contrato.
+     * Filtra faturas: admin vê todas, proprietário por imóvel, inquilino por contrato.
      */
-    protected function scopeCobrancasDoUsuario(Builder $query): Builder
+    protected function scopeFaturasDoUsuario(Builder $query): Builder
     {
         if ($this->isAdmin()) {
             return $query;
@@ -144,11 +144,11 @@ trait ScopesPorPapel
     }
 
     /**
-     * Verifica se o user tem acesso a uma cobrança específica.
+     * Verifica se o user tem acesso a uma fatura específica.
      */
-    protected function podeVerCobranca($cobranca): bool
+    protected function podeVerFatura($fatura): bool
     {
-        return $this->podeVerContrato($cobranca->contrato);
+        return $this->podeVerContrato($fatura->contrato);
     }
 
     /**

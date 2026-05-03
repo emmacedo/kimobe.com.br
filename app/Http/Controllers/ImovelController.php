@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Concerns\EnsuresPlanCapacity;
 use App\Http\Requests\StoreImovelRequest;
 use App\Http\Requests\UpdateImovelRequest;
-use App\Models\Administradora;
+use App\Models\EntidadeExterna;
 use App\Models\Imovel;
 use App\Services\TenantService;
 use App\Traits\ScopesPorPapel;
@@ -76,7 +76,7 @@ class ImovelController extends Controller
     public function create(): Response
     {
         return Inertia::render('imoveis/criar', [
-            'administradoras' => Administradora::orderBy('nome')->get(),
+            'entidadesExternas' => EntidadeExterna::where('tipo', 'administradora_condominio')->orderBy('nome')->get(),
         ]);
     }
 
@@ -148,7 +148,7 @@ class ImovelController extends Controller
             'titularidades.vinculo.user',
             'titularidades.dadosBancarios',
             'contratos.inquilino.user',
-            'condominio.administradora',
+            'condominio.entidadeExterna',
         ]);
 
         return Inertia::render('imoveis/mostrar', [
@@ -170,7 +170,7 @@ class ImovelController extends Controller
 
         return Inertia::render('imoveis/editar', [
             'imovel' => $imovel,
-            'administradoras' => Administradora::orderBy('nome')->get(),
+            'entidadesExternas' => EntidadeExterna::where('tipo', 'administradora_condominio')->orderBy('nome')->get(),
         ]);
     }
 

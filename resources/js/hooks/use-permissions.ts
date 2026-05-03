@@ -3,7 +3,7 @@ import { usePage } from '@inertiajs/react';
 type Can = {
     manage_imoveis: boolean;
     manage_contratos: boolean;
-    manage_cobrancas: boolean;
+    manage_faturas: boolean;
     manage_repasses: boolean;
     upload_comprovantes: boolean;
     view_repasses: boolean;

@@ -150,7 +150,7 @@ export default function MostrarRepasse({ repasse }: Props) {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <StatusBadge status={cobranca.status} tipo="cobranca" />
-                                    <Link href={`/financeiro/cobrancas/${cobranca.id}`} className="text-xs text-[#0A4F5C] hover:underline">Ver cobrança →</Link>
+                                    <Link href={`/financeiro/faturas/${cobranca.id}`} className="text-xs text-[#0A4F5C] hover:underline">Ver cobrança →</Link>
                                 </div>
                             </div>
                         </div>

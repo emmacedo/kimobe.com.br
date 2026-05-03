@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Cobranca;
 use App\Models\Contrato;
+use App\Models\Fatura;
 use App\Models\Imovel;
 use App\Models\Repasse;
 use App\Models\Scopes\TenantScope;
@@ -52,7 +52,7 @@ class DashboardController extends Controller
     {
         $mesAtual = now()->format('m/Y');
 
-        $receitaMensal = Cobranca::where('status', 'pago')
+        $receitaMensal = Fatura::where('status', 'pago')
             ->where('referencia', $mesAtual)
             ->sum('valor_pago');
 
@@ -60,20 +60,20 @@ class DashboardController extends Controller
         $imoveisAlugados = Imovel::where('status', 'alugado')->count();
         $taxaOcupacao = $totalImoveis > 0 ? round(($imoveisAlugados / $totalImoveis) * 100, 1) : 0;
 
-        $totalCobrancasMes = Cobranca::where('referencia', $mesAtual)->count();
-        $cobrancasAtrasadas = Cobranca::where('status', 'atrasado')->count();
+        $totalCobrancasMes = Fatura::where('referencia', $mesAtual)->count();
+        $cobrancasAtrasadas = Fatura::where('status', 'atrasado')->count();
         $inadimplencia = $totalCobrancasMes > 0 ? round(($cobrancasAtrasadas / $totalCobrancasMes) * 100, 1) : 0;
 
         $contratosAtivos = Contrato::where('status', 'ativo')->count();
 
         // Últimas 10 movimentações
-        $ultimasMovimentacoes = Cobranca::with(['contrato.imovel', 'contrato.inquilino.user'])
+        $ultimasMovimentacoes = Fatura::with(['contrato.imovel', 'contrato.inquilino.user'])
             ->orderBy('data_vencimento', 'desc')
             ->limit(10)
             ->get();
 
         // Pendências para barra de contexto
-        $cobrancasPendentes = Cobranca::whereIn('status', ['pendente', 'atrasado'])->count();
+        $cobrancasPendentes = Fatura::whereIn('status', ['pendente', 'atrasado'])->count();
 
         $dados = [
             'receita_mensal' => $receitaMensal,
@@ -135,7 +135,7 @@ class DashboardController extends Controller
         // Últimos 10 repasses
         $ultimosRepasses = Repasse::withoutGlobalScopes()
             ->whereHas('titularidade', fn ($q) => $q->withoutGlobalScopes([TenantScope::class])->whereIn('vinculo_id', $vinculoIds))
-            ->with(['cobranca.contrato.imovel', 'titularidade.vinculo.user'])
+            ->with(['fatura.contrato.imovel', 'titularidade.vinculo.user'])
             ->orderBy('data_prevista', 'desc')
             ->limit(10)
             ->get();
@@ -159,24 +159,24 @@ class DashboardController extends Controller
         $contratoIds = Contrato::whereIn('inquilino_vinculo_id', $vinculoIds)->pluck('id');
 
         // Próxima cobrança pendente
-        $proximaCobranca = Cobranca::whereIn('contrato_id', $contratoIds)
+        $proximaCobranca = Fatura::whereIn('contrato_id', $contratoIds)
             ->whereIn('status', ['pendente', 'atrasado'])
             ->with(['contrato.imovel'])
             ->orderBy('data_vencimento')
             ->first();
 
         // Total pago no ano
-        $totalPagoAno = Cobranca::whereIn('contrato_id', $contratoIds)
+        $totalPagoAno = Fatura::whereIn('contrato_id', $contratoIds)
             ->where('status', 'pago')
             ->whereYear('data_pagamento', now()->year)
             ->sum('valor_pago');
 
         // % em dia
-        $totalPagas = Cobranca::whereIn('contrato_id', $contratoIds)
+        $totalPagas = Fatura::whereIn('contrato_id', $contratoIds)
             ->where('status', 'pago')
             ->whereYear('data_pagamento', now()->year)
             ->count();
-        $pagasEmDia = Cobranca::whereIn('contrato_id', $contratoIds)
+        $pagasEmDia = Fatura::whereIn('contrato_id', $contratoIds)
             ->where('status', 'pago')
             ->whereYear('data_pagamento', now()->year)
             ->whereColumn('data_pagamento', '<=', 'data_vencimento')
@@ -184,7 +184,7 @@ class DashboardController extends Controller
         $percEmDia = $totalPagas > 0 ? round(($pagasEmDia / $totalPagas) * 100, 0) : 100;
 
         // Últimas 10 cobranças
-        $ultimasCobrancas = Cobranca::whereIn('contrato_id', $contratoIds)
+        $ultimasCobrancas = Fatura::whereIn('contrato_id', $contratoIds)
             ->with(['contrato.imovel'])
             ->orderBy('data_vencimento', 'desc')
             ->limit(10)

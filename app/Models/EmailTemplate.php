@@ -5,11 +5,26 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable(['modulo', 'chave', 'nome', 'descricao', 'assunto', 'corpo_html', 'corpo_texto', 'variaveis_disponiveis', 'ativo'])]
 class EmailTemplate extends Model
 {
+    use LogsActivity;
+
     protected $table = 'email_templates';
+
+    /**
+     * Auditoria de mudanças em templates do super admin — afetam comunicação.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['assunto', 'corpo_html', 'corpo_texto', 'variaveis_disponiveis', 'ativo'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     protected function casts(): array
     {
@@ -42,6 +57,7 @@ class EmailTemplate extends Model
         foreach ($variaveis as $chave => $valor) {
             $texto = str_replace("{{{$chave}}}", (string) $valor, $texto);
         }
+
         return $texto;
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCreator;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\TitularidadeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -10,14 +11,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
     'imovel_id', 'vinculo_id', 'dados_bancarios_id', 'tipo_titular', 'papel', 'percentual',
+    'criado_por_user_id', 'atualizado_por_user_id',
 ])]
 class Titularidade extends Model
 {
     /** @use HasFactory<TitularidadeFactory> */
-    use BelongsToTenant, HasFactory, SoftDeletes;
+    use BelongsToCreator, BelongsToTenant, HasFactory, LogsActivity, SoftDeletes;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['percentual', 'papel', 'tipo_titular', 'dados_bancarios_id'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     protected $table = 'titularidades';
 

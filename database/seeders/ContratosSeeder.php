@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Contrato;
-use App\Models\ContratoResponsabilidade;
 use App\Models\Fiador;
 use App\Models\Garantia;
 use App\Models\Imovel;
@@ -93,10 +92,6 @@ class ContratosSeeder extends Seeder
         ]);
 
         // Responsabilidades
-        $this->criarResponsabilidade($tenant1->id, $contrato1->id, 'IPTU', 'inquilino', 150.00, 'anual');
-        $this->criarResponsabilidade($tenant1->id, $contrato1->id, 'Condomínio', 'inquilino', 800.00, 'mensal');
-        $this->criarResponsabilidade($tenant1->id, $contrato1->id, 'Seguro incêndio', 'inquilino', 80.00, 'anual');
-        $this->criarResponsabilidade($tenant1->id, $contrato1->id, 'Taxa dos Bombeiros', 'proprietario', 50.00, 'anual');
 
         // === Contrato 2 — Casa 14, Cond. Verde (caução / repasse garantido) ===
         $ricardo = User::factory()->create([
@@ -144,10 +139,6 @@ class ContratosSeeder extends Seeder
             'status' => 'ativo',
             'observacoes' => 'Valor equivalente a 2x aluguel, depositado em poupança.',
         ]);
-
-        $this->criarResponsabilidade($tenant1->id, $contrato2->id, 'IPTU', 'inquilino', 280.00, 'anual');
-        $this->criarResponsabilidade($tenant1->id, $contrato2->id, 'Condomínio', 'inquilino', 1200.00, 'mensal');
-        $this->criarResponsabilidade($tenant1->id, $contrato2->id, 'Seguro incêndio', 'proprietario', 120.00, 'anual');
 
         // === Contrato 3 — Apt herdado, Ed. Família (seguro fiança / split 3 titulares) ===
         $rita = User::factory()->create([
@@ -199,9 +190,6 @@ class ContratosSeeder extends Seeder
             'observacoes' => 'Prêmio anual de R$ 2.280, renovação em janeiro.',
         ]);
 
-        $this->criarResponsabilidade($tenant1->id, $contrato3->id, 'IPTU', 'inquilino', 120.00, 'anual');
-        $this->criarResponsabilidade($tenant1->id, $contrato3->id, 'Condomínio', 'inquilino', 650.00, 'mensal');
-
         // === Contrato 4 — Loja 3, Galeria Central (título capitalização / proprietário direto) ===
         $cafeAroma = User::factory()->create([
             'name' => 'Café Aroma Ltda',
@@ -248,35 +236,6 @@ class ContratosSeeder extends Seeder
             'data_inicio' => '2025-05-01',
             'data_fim' => '2028-05-01',
             'status' => 'ativo',
-        ]);
-
-        $this->criarResponsabilidade($tenant3->id, $contrato4->id, 'IPTU', 'inquilino', 320.00, 'anual');
-        $this->criarResponsabilidade($tenant3->id, $contrato4->id, 'Condomínio', 'inquilino', 950.00, 'mensal');
-        $this->criarResponsabilidade($tenant3->id, $contrato4->id, 'Taxa extra de condomínio', 'inquilino', 200.00, 'avulso',
-            observacoes: 'Obra na fachada, previsão 6 meses.');
-    }
-
-    /**
-     * Cria uma responsabilidade financeira pré-definida para o contrato.
-     */
-    private function criarResponsabilidade(
-        int $tenantId,
-        int $contratoId,
-        string $descricao,
-        string $responsavel,
-        float $valor,
-        string $periodicidade,
-        ?string $observacoes = null,
-    ): void {
-        ContratoResponsabilidade::create([
-            'tenant_id' => $tenantId,
-            'contrato_id' => $contratoId,
-            'descricao' => $descricao,
-            'responsavel' => $responsavel,
-            'valor' => $valor,
-            'periodicidade' => $periodicidade,
-            'predefinido' => true,
-            'observacoes' => $observacoes,
         ]);
     }
 }

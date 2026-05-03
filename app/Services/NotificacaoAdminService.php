@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Cobranca;
 use App\Models\Contrato;
+use App\Models\Fatura;
 use App\Models\Repasse;
+use App\Models\Tenant;
 
 /**
  * Encapsula o envio de notificações do módulo admin (admin → proprietário/inquilino).
@@ -18,53 +19,57 @@ class NotificacaoAdminService
 
     // ======================== INQUILINO ========================
 
-    public function notificarCobrancaGerada(Cobranca $cobranca): void
+    public function notificarFaturaGerada(Fatura $fatura): void
     {
-        $contrato = $cobranca->contrato;
+        $contrato = $fatura->contrato;
         $contrato->loadMissing(['inquilino.user', 'imovel']);
 
         $email = $contrato->getEmailInquilino();
-        if (! $email) return;
+        if (! $email) {
+            return;
+        }
 
         $this->emailService->enviar('admin.cobranca_gerada', $email, $contrato->getNomeInquilino() ?? '', [
             'nome' => $contrato->getNomeInquilino(),
             'imovel_endereco' => $contrato->getEnderecoResumido(),
-            'referencia' => $cobranca->referencia,
-            'valor_total' => number_format($cobranca->valor_total, 2, ',', '.'),
-            'data_vencimento' => $cobranca->data_vencimento->format('d/m/Y'),
-        ], $cobranca->tenant_id);
+            'referencia' => $fatura->referencia,
+            'valor_total' => number_format($fatura->valor_total, 2, ',', '.'),
+            'data_vencimento' => $fatura->data_vencimento->format('d/m/Y'),
+        ], $fatura->tenant_id);
     }
 
-    public function notificarPagamentoInquilino(Cobranca $cobranca): void
+    public function notificarPagamentoInquilino(Fatura $fatura): void
     {
-        $contrato = $cobranca->contrato;
+        $contrato = $fatura->contrato;
         $contrato->loadMissing(['inquilino.user', 'imovel']);
 
         $email = $contrato->getEmailInquilino();
-        if (! $email) return;
+        if (! $email) {
+            return;
+        }
 
         $this->emailService->enviar('admin.confirmacao_pagamento_inquilino', $email, $contrato->getNomeInquilino() ?? '', [
             'nome' => $contrato->getNomeInquilino(),
             'imovel_endereco' => $contrato->getEnderecoResumido(),
-            'referencia' => $cobranca->referencia,
-            'valor_pago' => number_format($cobranca->valor_pago, 2, ',', '.'),
-            'data_pagamento' => $cobranca->data_pagamento?->format('d/m/Y'),
-        ], $cobranca->tenant_id);
+            'referencia' => $fatura->referencia,
+            'valor_pago' => number_format($fatura->valor_pago, 2, ',', '.'),
+            'data_pagamento' => $fatura->data_pagamento?->format('d/m/Y'),
+        ], $fatura->tenant_id);
     }
 
     // ======================== PROPRIETÁRIO ========================
 
     public function notificarRepassePendente(Repasse $repasse): void
     {
-        $repasse->loadMissing(['titularidade.vinculo.user', 'cobranca.contrato.imovel']);
+        $repasse->loadMissing(['titularidade.vinculo.user', 'fatura.contrato.imovel']);
 
         $user = $repasse->titularidade->vinculo->user;
-        $contrato = $repasse->cobranca->contrato;
+        $contrato = $repasse->fatura->contrato;
 
         $this->emailService->enviar('admin.repasse_pendente', $user->email, $user->name, [
             'nome' => $user->name,
             'imovel_endereco' => $contrato->getEnderecoResumido(),
-            'referencia' => $repasse->cobranca->referencia,
+            'referencia' => $repasse->fatura->referencia,
             'valor_liquido' => number_format($repasse->valor_liquido, 2, ',', '.'),
             'data_prevista' => $repasse->data_prevista->format('d/m/Y'),
         ], $repasse->tenant_id);
@@ -72,16 +77,16 @@ class NotificacaoAdminService
 
     public function notificarRepasseRealizado(Repasse $repasse): void
     {
-        $repasse->loadMissing(['titularidade.vinculo.user', 'titularidade.dadosBancarios', 'cobranca.contrato.imovel']);
+        $repasse->loadMissing(['titularidade.vinculo.user', 'titularidade.dadosBancarios', 'fatura.contrato.imovel']);
 
         $user = $repasse->titularidade->vinculo->user;
-        $contrato = $repasse->cobranca->contrato;
+        $contrato = $repasse->fatura->contrato;
         $banco = $repasse->titularidade->dadosBancarios;
 
         $this->emailService->enviar('admin.repasse_realizado', $user->email, $user->name, [
             'nome' => $user->name,
             'imovel_endereco' => $contrato->getEnderecoResumido(),
-            'referencia' => $repasse->cobranca->referencia,
+            'referencia' => $repasse->fatura->referencia,
             'valor_liquido' => number_format($repasse->valor_liquido, 2, ',', '.'),
             'data_realizada' => $repasse->data_realizada?->format('d/m/Y'),
             'banco_nome' => $banco?->banco_nome ?? '—',
@@ -121,19 +126,21 @@ class NotificacaoAdminService
         }
     }
 
-    public function notificarComprovanteEnviado(Cobranca $cobranca, string $inquilinoNome): void
+    public function notificarComprovanteEnviado(Fatura $fatura, string $inquilinoNome): void
     {
-        $cobranca->loadMissing(['contrato.imovel']);
-        $tenant = \App\Models\Tenant::find($cobranca->tenant_id);
-        if (! $tenant) return;
+        $fatura->loadMissing(['contrato.imovel']);
+        $tenant = Tenant::find($fatura->tenant_id);
+        if (! $tenant) {
+            return;
+        }
 
         foreach ($tenant->getAdminEmails() as $adminEmail) {
             $this->emailService->enviar('admin.comprovante_enviado', $adminEmail, 'Admin', [
                 'inquilino_nome' => $inquilinoNome,
-                'imovel_endereco' => $cobranca->contrato->getEnderecoResumido(),
-                'referencia' => $cobranca->referencia,
+                'imovel_endereco' => $fatura->contrato->getEnderecoResumido(),
+                'referencia' => $fatura->referencia,
                 'data_envio' => now()->format('d/m/Y H:i'),
-            ], $cobranca->tenant_id);
+            ], $fatura->tenant_id);
         }
     }
 }

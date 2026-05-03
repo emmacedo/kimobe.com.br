@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 #[Fillable([
-    'cobranca_id', 'titularidade_id', 'valor_aluguel_bruto', 'taxa_administracao_valor',
+    'fatura_id', 'titularidade_id', 'valor_aluguel_bruto', 'taxa_administracao_valor',
     'taxa_seguro_inadimplencia_valor', 'valor_liquido', 'data_prevista', 'data_realizada',
     'status', 'observacoes',
+    'taxa_administracao_pct_aplicada', 'taxa_seguro_inadimplencia_pct_aplicada',
+    'percentual_titularidade_aplicado', 'gerado_por_user_id', 'realizado_por_user_id',
 ])]
 class Repasse extends Model
 {
@@ -35,15 +37,18 @@ class Repasse extends Model
             'data_prevista' => 'date',
             'data_realizada' => 'date',
             'status' => 'string',
+            'taxa_administracao_pct_aplicada' => 'decimal:2',
+            'taxa_seguro_inadimplencia_pct_aplicada' => 'decimal:2',
+            'percentual_titularidade_aplicado' => 'decimal:2',
         ];
     }
 
     /**
-     * Cobrança que originou este repasse.
+     * Fatura que originou este repasse.
      */
-    public function cobranca(): BelongsTo
+    public function fatura(): BelongsTo
     {
-        return $this->belongsTo(Cobranca::class);
+        return $this->belongsTo(Fatura::class);
     }
 
     /**
@@ -55,10 +60,10 @@ class Repasse extends Model
     }
 
     /**
-     * Comprovantes de transferência deste repasse.
+     * Comprovantes de transferência deste repasse (polimórficos).
      */
-    public function comprovantes(): HasMany
+    public function comprovantes(): MorphMany
     {
-        return $this->hasMany(RepasseComprovante::class);
+        return $this->morphMany(Comprovante::class, 'owner');
     }
 }

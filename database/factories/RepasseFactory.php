@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Cobranca;
+use App\Models\Fatura;
 use App\Models\Repasse;
 use App\Models\Tenant;
 use App\Models\Titularidade;
@@ -20,7 +20,7 @@ class RepasseFactory extends Factory
 
         return [
             'tenant_id' => Tenant::factory(),
-            'cobranca_id' => Cobranca::factory(),
+            'fatura_id' => Fatura::factory(),
             'titularidade_id' => Titularidade::factory(),
             'valor_aluguel_bruto' => $bruto,
             'taxa_administracao_valor' => $taxaAdmin,

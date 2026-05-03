@@ -3,17 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Repasse;
+use App\Services\NotificacaoAdminService;
 use App\Traits\ScopesPorPapel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RepasseController extends Controller
 {
     use ScopesPorPapel;
+
     public function index(Request $request): Response
     {
         $mesAno = $request->input('mes', now()->format('Y-m'));
@@ -22,8 +25,8 @@ class RepasseController extends Controller
             ->with([
                 'titularidade.vinculo.user',
                 'titularidade.dadosBancarios',
-                'cobranca.contrato.imovel',
-                'cobranca.contrato',
+                'fatura.contrato.imovel',
+                'fatura.contrato',
             ]);
 
         // Scoping por papel
@@ -38,7 +41,7 @@ class RepasseController extends Controller
         if ($busca = $request->input('busca')) {
             $query->where(function ($q) use ($busca) {
                 $q->whereHas('titularidade.vinculo.user', fn ($qu) => $qu->where('name', 'like', "%{$busca}%"))
-                    ->orWhereHas('cobranca.contrato.imovel', fn ($qi) => $qi
+                    ->orWhereHas('fatura.contrato.imovel', fn ($qi) => $qi
                         ->where('logradouro', 'like', "%{$busca}%")
                         ->orWhere('complemento', 'like', "%{$busca}%")
                     );
@@ -88,9 +91,9 @@ class RepasseController extends Controller
         $repasse->load([
             'titularidade.vinculo.user',
             'titularidade.dadosBancarios',
-            'cobranca.contrato.imovel.fotoPrincipal',
-            'cobranca.contrato',
-            'cobranca',
+            'fatura.contrato.imovel.fotoPrincipal',
+            'fatura.contrato',
+            'fatura',
             'comprovantes',
         ]);
 
@@ -114,12 +117,13 @@ class RepasseController extends Controller
             'status' => 'realizado',
             'data_realizada' => $request->data_realizada,
             'observacoes' => $request->observacoes,
+            'realizado_por_user_id' => auth()->id(),
         ]);
 
         try {
-            app(\App\Services\NotificacaoAdminService::class)->notificarRepasseRealizado($repasse);
+            app(NotificacaoAdminService::class)->notificarRepasseRealizado($repasse);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Falha ao notificar repasse realizado: {$e->getMessage()}");
+            Log::warning("Falha ao notificar repasse realizado: {$e->getMessage()}");
         }
 
         return redirect()->route('repasses.show', $repasse)
@@ -145,10 +149,12 @@ class RepasseController extends Controller
                     'status' => 'realizado',
                     'data_realizada' => $request->data_realizada,
                     'observacoes' => $request->observacoes,
+                    'realizado_por_user_id' => auth()->id(),
                 ]);
                 try {
-                    app(\App\Services\NotificacaoAdminService::class)->notificarRepasseRealizado($repasse);
-                } catch (\Throwable $e) { /* silencioso */ }
+                    app(NotificacaoAdminService::class)->notificarRepasseRealizado($repasse);
+                } catch (\Throwable $e) { /* silencioso */
+                }
             }
 
             return [

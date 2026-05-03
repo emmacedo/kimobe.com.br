@@ -1,5 +1,5 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Building2, Calendar, Camera, Info, Landmark, Pencil } from 'lucide-react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Building2, Calendar, Camera, ChevronDown, ChevronRight, History, Info, Landmark, Pencil, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -9,7 +9,13 @@ import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-// Dialog não mais necessário diretamente — FiadorDetalhesDialog encapsula
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -17,6 +23,15 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -28,9 +43,15 @@ import {
 import { formataMoeda } from '@/lib/utils';
 
 // Labels
-const indiceLabels: Record<string, string> = { igpm: 'IGPM', ipca: 'IPCA', fixo: 'Fixo' };
+const indiceLabels: Record<string, string> = { igpm: 'IGPM', ipca: 'IPCA', fixo: 'Fixo', manual: 'Manual' };
 const garantiaTipoLabels: Record<string, string> = { caucao: 'Caução', fiador: 'Fiador', seguro_fianca: 'Seguro fiança', titulo_capitalizacao: 'Título de capitalização', sem_garantia: 'Sem garantia' };
 const papelLabels: Record<string, string> = { responsavel: 'Responsável', observador: 'Observador' };
+const reajusteOrigemLabels: Record<string, string> = {
+    reajuste_anual: 'Reajuste anual',
+    aditivo: 'Aditivo',
+    renegociacao: 'Renegociação',
+    correcao: 'Correção',
+};
 
 function formatDate(d: string): string {
     return new Date(d).toLocaleDateString('pt-BR');
@@ -40,22 +61,92 @@ function cpfParcial(cpf: string): string {
     return cpf.length > 6 ? `***${cpf.slice(-6)}` : cpf;
 }
 
-type Props = {
-    contrato: any;
-    cobrancasRecentes: any[];
-    contatoAdmin?: { nome: string; email: string } | null;
+type EventoAuditoria = {
+    id: string;
+    tipo: 'reajuste' | 'alteracao' | 'atividade';
+    data: string;
+    titulo: string;
+    subtitulo?: string;
+    usuario?: string | null;
+    valor_anterior?: any;
+    valor_novo?: any;
+    properties?: any;
+    extra?: Record<string, any>;
 };
 
-export default function MostrarContrato({ contrato, cobrancasRecentes, contatoAdmin }: Props) {
+type Props = {
+    contrato: any;
+    faturasRecentes: any[];
+    contatoAdmin?: { nome: string; email: string } | null;
+    timelineAuditoria?: EventoAuditoria[] | null;
+};
+
+export default function MostrarContrato({ contrato, faturasRecentes, contatoAdmin, timelineAuditoria }: Props) {
     const { flash } = usePage().props as any;
     const { can, isInquilino } = usePermissions();
     const [actionTarget, setActionTarget] = useState<'encerrar' | 'cancelar' | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [fiadorDialog, setFiadorDialog] = useState<any>(null);
+    const [reajusteOpen, setReajusteOpen] = useState(false);
+    const [timelineFiltro, setTimelineFiltro] = useState<'todos' | 'reajuste' | 'alteracao' | 'atividade'>('todos');
+    const [timelineExpanded, setTimelineExpanded] = useState<Set<string>>(new Set());
+
+    const reajusteForm = useForm({
+        valor_novo: '',
+        data_aplicacao: '',
+        indice_usado: contrato.indice_reajuste === 'fixo' ? 'fixo' : (contrato.indice_reajuste ?? 'manual'),
+        origem: 'reajuste_anual',
+        observacao: '',
+    });
 
     useEffect(() => {
         if (flash?.success) toast.success(flash.success);
     }, [flash?.success]);
+
+    function abrirReajuste() {
+        reajusteForm.reset();
+        reajusteForm.setData({
+            valor_novo: '',
+            data_aplicacao: '',
+            indice_usado: contrato.indice_reajuste === 'fixo' ? 'fixo' : (contrato.indice_reajuste ?? 'manual'),
+            origem: 'reajuste_anual',
+            observacao: '',
+        });
+        setReajusteOpen(true);
+    }
+
+    function aplicarReajuste(e: React.FormEvent) {
+        e.preventDefault();
+        reajusteForm.post(`/contratos/${contrato.id}/reajustes`, {
+            preserveScroll: true,
+            onSuccess: () => setReajusteOpen(false),
+        });
+    }
+
+    function toggleTimelineDetalhe(id: string) {
+        setTimelineExpanded((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }
+
+    const timelineFiltrada = (timelineAuditoria ?? []).filter((e) =>
+        timelineFiltro === 'todos' ? true : e.tipo === timelineFiltro
+    );
+
+    function formatDateTime(iso: string): string {
+        const d = new Date(iso);
+        return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    const tipoLabels: Record<string, string> = { reajuste: 'Reajuste', alteracao: 'Alteração contratual', atividade: 'Atividade' };
+    const tipoCores: Record<string, string> = {
+        reajuste: 'bg-[#FBF6E8] text-[#6B5420] border-[#E6D9B0]',
+        alteracao: 'bg-[#E8F4F6] text-[#0A4F5C] border-[#B7DDE3]',
+        atividade: 'bg-[#F7F8F7] text-[#3A4240] border-[#D8DCDA]',
+    };
 
     const imovel = contrato.imovel;
     const inquilino = contrato.inquilino;
@@ -162,41 +253,48 @@ export default function MostrarContrato({ contrato, cobrancasRecentes, contatoAd
                             </div>
                         </div>
 
-                        {/* Responsabilidades */}
-                        <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
-                            <p className="mb-3 text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Responsabilidades</p>
-                            {contrato.responsabilidades?.length > 0 ? (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-[#F7F8F7] hover:bg-[#F7F8F7]">
-                                            <TableHead className="text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Item</TableHead>
-                                            <TableHead className="text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Responsável</TableHead>
-                                            <TableHead className="text-right text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Valor</TableHead>
-                                            <TableHead className="text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Periodicidade</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {contrato.responsabilidades.map((r: any) => (
-                                            <TableRow key={r.id} className="border-b border-[#F7F8F7]">
-                                                <TableCell className="text-sm">
-                                                    {r.descricao}
-                                                    {r.predefinido && <Badge variant="outline" className="ml-2 text-[9px]">Pré-definido</Badge>}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant="secondary" className={r.responsavel === 'proprietario' ? 'bg-[#E8F4F6] text-[#0A4F5C]' : 'bg-[#F7F8F7] text-[#6B7370]'}>
-                                                        {r.responsavel === 'proprietario' ? 'Proprietário' : 'Inquilino'}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right font-mono text-sm">{r.valor ? formataMoeda(r.valor) : '—'}</TableCell>
-                                                <TableCell className="text-xs capitalize text-[#6B7370]">{r.periodicidade}</TableCell>
+                        {/* Reajustes — oculto para inquilinos */}
+                        {!isInquilino && (
+                            <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <p className="text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Reajustes</p>
+                                    {can.manage_contratos && contrato.status === 'ativo' && (
+                                        <Button size="sm" variant="outline" className="border-[#D8DCDA]" onClick={abrirReajuste}>
+                                            <TrendingUp className="mr-1 h-3.5 w-3.5" />
+                                            Aplicar reajuste
+                                        </Button>
+                                    )}
+                                </div>
+                                {contrato.reajustes && contrato.reajustes.length > 0 ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="border-[#EEF0EF] hover:bg-transparent">
+                                                <TableHead className="text-[11px] uppercase text-[#8A918E]">Aplicação</TableHead>
+                                                <TableHead className="text-[11px] uppercase text-[#8A918E]">Origem</TableHead>
+                                                <TableHead className="text-[11px] uppercase text-[#8A918E]">Índice</TableHead>
+                                                <TableHead className="text-right text-[11px] uppercase text-[#8A918E]">Anterior</TableHead>
+                                                <TableHead className="text-right text-[11px] uppercase text-[#8A918E]">Novo</TableHead>
+                                                <TableHead className="text-right text-[11px] uppercase text-[#8A918E]">%</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            ) : (
-                                <p className="text-sm text-[#8A918E]">Nenhuma responsabilidade definida</p>
-                            )}
-                        </div>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {contrato.reajustes.map((r: any) => (
+                                                <TableRow key={r.id} className="border-[#EEF0EF]">
+                                                    <TableCell className="text-sm">{formatDate(r.data_aplicacao)}</TableCell>
+                                                    <TableCell className="text-sm">{reajusteOrigemLabels[r.origem] ?? r.origem}</TableCell>
+                                                    <TableCell className="text-sm">{indiceLabels[r.indice_usado] ?? r.indice_usado}</TableCell>
+                                                    <TableCell className="text-right font-mono text-sm text-[#6B7370]">{formataMoeda(r.valor_anterior)}</TableCell>
+                                                    <TableCell className="text-right font-mono text-sm font-medium">{formataMoeda(r.valor_novo)}</TableCell>
+                                                    <TableCell className="text-right font-mono text-sm">{parseFloat(r.percentual).toFixed(2)}%</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <p className="text-sm text-[#8A918E]">Nenhum reajuste aplicado</p>
+                                )}
+                            </div>
+                        )}
 
                         {/* Garantia */}
                         <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
@@ -250,13 +348,111 @@ export default function MostrarContrato({ contrato, cobrancasRecentes, contatoAd
                             )}
                         </div>
 
+                        {/* Timeline de auditoria — admin/proprietário */}
+                        {timelineAuditoria && (
+                            <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
+                                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                    <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">
+                                        <History className="h-3.5 w-3.5" />
+                                        Histórico do contrato
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {(['todos', 'reajuste', 'alteracao', 'atividade'] as const).map((t) => (
+                                            <button
+                                                key={t}
+                                                type="button"
+                                                onClick={() => setTimelineFiltro(t)}
+                                                className={`rounded-full border px-2.5 py-0.5 text-[11px] transition-colors ${
+                                                    timelineFiltro === t
+                                                        ? 'border-[#0A4F5C] bg-[#0A4F5C] text-white'
+                                                        : 'border-[#D8DCDA] bg-white text-[#6B7370] hover:bg-[#F7F8F7]'
+                                                }`}
+                                            >
+                                                {t === 'todos' ? 'Todos' : tipoLabels[t]}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {timelineFiltrada.length === 0 ? (
+                                    <p className="text-sm text-[#8A918E]">Nenhum evento registrado</p>
+                                ) : (
+                                    <ol className="space-y-2">
+                                        {timelineFiltrada.map((e) => {
+                                            const aberto = timelineExpanded.has(e.id);
+                                            return (
+                                                <li key={e.id} className="rounded-md border border-[#EEF0EF]">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleTimelineDetalhe(e.id)}
+                                                        className="flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-[#FAFBFA]"
+                                                    >
+                                                        <span className={`mt-0.5 inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${tipoCores[e.tipo]}`}>
+                                                            {tipoLabels[e.tipo]}
+                                                        </span>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate text-sm font-medium text-[#1E2D30]">{e.titulo}</p>
+                                                            {e.subtitulo && (
+                                                                <p className="mt-0.5 truncate text-xs text-[#6B7370]">{e.subtitulo}</p>
+                                                            )}
+                                                            <p className="mt-0.5 text-[11px] text-[#8A918E]">
+                                                                {formatDateTime(e.data)}
+                                                                {e.usuario && <> · por <span className="font-medium text-[#3A4240]">{e.usuario}</span></>}
+                                                            </p>
+                                                        </div>
+                                                        {aberto ? (
+                                                            <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-[#8A918E]" />
+                                                        ) : (
+                                                            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-[#8A918E]" />
+                                                        )}
+                                                    </button>
+                                                    {aberto && (
+                                                        <div className="border-t border-[#EEF0EF] bg-[#FAFBFA] px-3 py-2.5">
+                                                            {e.tipo === 'reajuste' && e.extra && (
+                                                                <dl className="grid gap-1.5 text-xs sm:grid-cols-2">
+                                                                    <div><dt className="text-[#8A918E]">Origem</dt><dd className="text-[#1E2D30]">{reajusteOrigemLabels[e.extra.origem] ?? e.extra.origem}</dd></div>
+                                                                    <div><dt className="text-[#8A918E]">Índice</dt><dd className="text-[#1E2D30]">{indiceLabels[e.extra.indice_usado] ?? e.extra.indice_usado}</dd></div>
+                                                                    <div><dt className="text-[#8A918E]">Aplicação</dt><dd className="text-[#1E2D30]">{formatDate(e.extra.data_aplicacao)}</dd></div>
+                                                                    <div><dt className="text-[#8A918E]">Variação</dt><dd className="font-mono text-[#1E2D30]">{formataMoeda(e.valor_anterior)} → {formataMoeda(e.valor_novo)}</dd></div>
+                                                                    {e.extra.observacao && (
+                                                                        <div className="sm:col-span-2"><dt className="text-[#8A918E]">Observação</dt><dd className="text-[#3A4240]">{e.extra.observacao}</dd></div>
+                                                                    )}
+                                                                </dl>
+                                                            )}
+                                                            {e.tipo === 'alteracao' && (
+                                                                <dl className="grid gap-1.5 text-xs sm:grid-cols-2">
+                                                                    <div><dt className="text-[#8A918E]">Campo</dt><dd className="font-mono text-[#1E2D30]">{e.extra?.campo}</dd></div>
+                                                                    <div><dt className="text-[#8A918E]">Data efetiva</dt><dd className="text-[#1E2D30]">{formatDate(e.extra?.data_efetiva)}</dd></div>
+                                                                    <div className="sm:col-span-2">
+                                                                        <dt className="text-[#8A918E]">Mudança</dt>
+                                                                        <dd className="font-mono text-[#1E2D30]">
+                                                                            {JSON.stringify(e.valor_anterior?.[e.extra?.campo] ?? null)}
+                                                                            <span className="mx-2 text-[#8A918E]">→</span>
+                                                                            {JSON.stringify(e.valor_novo?.[e.extra?.campo] ?? null)}
+                                                                        </dd>
+                                                                    </div>
+                                                                </dl>
+                                                            )}
+                                                            {e.tipo === 'atividade' && e.properties && (
+                                                                <pre className="overflow-x-auto rounded bg-white p-2 font-mono text-[11px] text-[#3A4240]">{JSON.stringify(e.properties, null, 2)}</pre>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </li>
+                                            );
+                                        })}
+                                    </ol>
+                                )}
+                            </div>
+                        )}
+
                         {/* Cobranças recentes */}
                         <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
                             <p className="mb-3 text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">Cobranças recentes</p>
-                            {cobrancasRecentes.length > 0 ? (
+                            {faturasRecentes.length > 0 ? (
                                 <div className="space-y-2">
-                                    {cobrancasRecentes.map((cob: any) => (
-                                        <Link key={cob.id} href={`/financeiro/cobrancas/${cob.id}`}
+                                    {faturasRecentes.map((cob: any) => (
+                                        <Link key={cob.id} href={`/financeiro/faturas/${cob.id}`}
                                             className="flex items-center justify-between rounded-md border border-[#EEF0EF] px-3 py-2.5 transition-colors hover:bg-[#FAFBFA]">
                                             <div>
                                                 <p className="text-sm font-medium text-[#1E2D30]">Ref. {cob.referencia}</p>
@@ -413,6 +609,92 @@ export default function MostrarContrato({ contrato, cobrancasRecentes, contatoAd
                 open={!!fiadorDialog}
                 onOpenChange={(open) => !open && setFiadorDialog(null)}
             />
+
+            {/* Dialog aplicar reajuste */}
+            <Dialog open={reajusteOpen} onOpenChange={setReajusteOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Aplicar reajuste</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={aplicarReajuste} className="space-y-3">
+                        <div className="rounded-md bg-[#F7F8F7] px-3 py-2 text-xs text-[#6B7370]">
+                            Valor atual: <span className="font-mono font-medium text-[#1E2D30]">{formataMoeda(contrato.valor_aluguel)}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label>Novo valor</Label>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    value={reajusteForm.data.valor_novo}
+                                    onChange={(e) => reajusteForm.setData('valor_novo', e.target.value)}
+                                    className="bg-white border-[#D8DCDA]"
+                                />
+                                {reajusteForm.errors.valor_novo && (
+                                    <p className="mt-1 text-xs text-[#A83232]">{reajusteForm.errors.valor_novo}</p>
+                                )}
+                            </div>
+                            <div>
+                                <Label>Aplicação</Label>
+                                <Input
+                                    type="date"
+                                    value={reajusteForm.data.data_aplicacao}
+                                    onChange={(e) => reajusteForm.setData('data_aplicacao', e.target.value)}
+                                    className="bg-white border-[#D8DCDA]"
+                                />
+                                {reajusteForm.errors.data_aplicacao && (
+                                    <p className="mt-1 text-xs text-[#A83232]">{reajusteForm.errors.data_aplicacao}</p>
+                                )}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label>Índice</Label>
+                                <Select value={reajusteForm.data.indice_usado} onValueChange={(v) => reajusteForm.setData('indice_usado', v)}>
+                                    <SelectTrigger className="bg-white border-[#D8DCDA]"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="igpm">IGPM</SelectItem>
+                                        <SelectItem value="ipca">IPCA</SelectItem>
+                                        <SelectItem value="fixo">Fixo</SelectItem>
+                                        <SelectItem value="manual">Manual</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label>Origem</Label>
+                                <Select value={reajusteForm.data.origem} onValueChange={(v) => reajusteForm.setData('origem', v)}>
+                                    <SelectTrigger className="bg-white border-[#D8DCDA]"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="reajuste_anual">Reajuste anual</SelectItem>
+                                        <SelectItem value="aditivo">Aditivo</SelectItem>
+                                        <SelectItem value="renegociacao">Renegociação</SelectItem>
+                                        <SelectItem value="correcao">Correção</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div>
+                            <Label>Observação <span className="text-[#8A918E]">(opcional)</span></Label>
+                            <textarea
+                                value={reajusteForm.data.observacao}
+                                onChange={(e) => reajusteForm.setData('observacao', e.target.value)}
+                                rows={2}
+                                className="w-full rounded-md border border-[#D8DCDA] bg-white px-3 py-2 text-sm focus:border-[#0A4F5C] focus:outline-none focus:ring-1 focus:ring-[#0A4F5C]"
+                            />
+                        </div>
+                        <p className="rounded-md bg-[#FBF6E8] px-3 py-2 text-xs text-[#6B5420]">
+                            O novo valor é aplicado a partir da data e propagado para todos os itens de aluguel pendentes nesse mês ou posteriores. Itens já conciliados ficam intocados.
+                        </p>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setReajusteOpen(false)} className="border-[#D8DCDA]">Cancelar</Button>
+                            <Button type="submit" disabled={reajusteForm.processing} className="bg-[#0A4F5C] text-white hover:bg-[#073B45]">
+                                {reajusteForm.processing ? 'Aplicando...' : 'Aplicar reajuste'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

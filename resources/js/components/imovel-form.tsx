@@ -4,7 +4,7 @@ import { InputCep } from '@/components/input-cep';
 import InputError from '@/components/input-error';
 import { InputMoeda } from '@/components/input-moeda';
 import { SelectUf } from '@/components/select-uf';
-import { SeletorAdministradora } from '@/components/seletor-administradora';
+import { SeletorEntidadeExterna } from '@/components/seletor-entidade-externa';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,10 +16,10 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import type { Administradora } from '@/types/models';
+import type { EntidadeExterna } from '@/types/models';
 
 export type CondominioFormData = {
-    administradora_id: number | null;
+    entidade_externa_id: number | null;
     dia_vencimento: number | null;
     valor: number | null;
     acesso_login: string;
@@ -28,7 +28,7 @@ export type CondominioFormData = {
 };
 
 export const condominioVazio: CondominioFormData = {
-    administradora_id: null,
+    entidade_externa_id: null,
     dia_vencimento: null,
     valor: null,
     acesso_login: '',
@@ -60,7 +60,7 @@ export type ImovelFormData = {
 
 type Props = {
     dados: ImovelFormData;
-    administradoras: Administradora[];
+    entidadesExternas: EntidadeExterna[];
     errors: Record<string, string>;
     processing: boolean;
     onSubmit: (dados: ImovelFormData) => void;
@@ -77,7 +77,7 @@ const tiposSemAndar = ['casa'];
 
 export function ImovelForm({
     dados,
-    administradoras: administradorasIniciais,
+    entidadesExternas: entidadesIniciais,
     errors,
     processing,
     onSubmit,
@@ -87,7 +87,7 @@ export function ImovelForm({
     mostrarPlaceholders = true,
 }: Props) {
     const [form, setForm] = useState<ImovelFormData>(dados);
-    const [administradoras, setAdministradoras] = useState<Administradora[]>(administradorasIniciais);
+    const [entidadesExternas, setEntidadesExternas] = useState<EntidadeExterna[]>(entidadesIniciais);
     const [verSenha, setVerSenha] = useState(false);
     const initialRef = useRef(JSON.stringify(dados));
     const numeroRef = useRef<HTMLInputElement>(null);
@@ -131,8 +131,8 @@ export function ImovelForm({
         setTimeout(() => numeroRef.current?.focus(), 100);
     }
 
-    function handleAdministradoraCriada(administradora: Administradora) {
-        setAdministradoras((prev) => [...prev, administradora].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
+    function handleEntidadeCriada(entidade: EntidadeExterna) {
+        setEntidadesExternas((prev) => [...prev, entidade].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')));
     }
 
     function handleSubmit(e: React.FormEvent) {
@@ -418,13 +418,16 @@ export function ImovelForm({
                         </div>
                         <div className="sm:col-span-5">
                             <Label>Administradora</Label>
-                            <SeletorAdministradora
-                                administradoras={administradoras}
-                                value={form.condominio.administradora_id}
-                                onChange={(id) => setCondominioField('administradora_id', id)}
-                                onAdministradoraCriada={handleAdministradoraCriada}
+                            <SeletorEntidadeExterna
+                                entidades={entidadesExternas}
+                                value={form.condominio.entidade_externa_id}
+                                onChange={(id) => setCondominioField('entidade_externa_id', id)}
+                                onEntidadeCriada={handleEntidadeCriada}
+                                tipoCriacao="administradora_condominio"
+                                placeholder="Selecione a administradora"
+                                tituloDialog="Cadastrar nova administradora"
                             />
-                            <InputError message={errors['condominio.administradora_id']} />
+                            <InputError message={errors['condominio.entidade_externa_id']} />
                         </div>
                     </div>
 

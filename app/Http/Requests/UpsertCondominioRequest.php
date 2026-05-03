@@ -32,9 +32,9 @@ class UpsertCondominioRequest extends FormRequest
         $tenantId = app(TenantService::class)->getTenantId();
 
         return [
-            'administradora_id' => [
+            'entidade_externa_id' => [
                 'nullable', 'integer',
-                Rule::exists('administradoras', 'id')->where('tenant_id', $tenantId)->whereNull('deleted_at'),
+                Rule::exists('entidades_externas', 'id')->where('tenant_id', $tenantId)->whereNull('deleted_at'),
             ],
             'dia_vencimento' => ['nullable', 'integer', 'between:1,31'],
             'valor' => ['nullable', 'numeric', 'min:0'],
@@ -50,7 +50,7 @@ class UpsertCondominioRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'administradora_id.exists' => 'A administradora selecionada é inválida.',
+            'entidade_externa_id.exists' => 'A entidade externa selecionada é inválida.',
             'dia_vencimento.between' => 'O dia de vencimento deve estar entre 1 e 31.',
             'valor.min' => 'O valor do condomínio deve ser maior ou igual a zero.',
             'acesso_descricao.max' => 'A descrição de acesso não pode ter mais de 5000 caracteres.',

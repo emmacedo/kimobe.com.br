@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Cobranca;
+use App\Models\Fatura;
 use App\Services\EmailNotificationService;
 use App\Services\NotificacaoAdminService;
 use Carbon\Carbon;
@@ -22,7 +22,7 @@ class AtualizarCobrancasAtrasadas implements ShouldQueue
 
     public function handle(): void
     {
-        $cobrancas = Cobranca::withoutGlobalScopes()
+        $cobrancas = Fatura::withoutGlobalScopes()
             ->where('status', 'pendente')
             ->where('data_vencimento', '<', now()->startOfDay())
             ->with(['contrato.inquilino.user', 'contrato.imovel'])
@@ -57,7 +57,9 @@ class AtualizarCobrancasAtrasadas implements ShouldQueue
             // Notificar proprietários do imóvel
             if ($contrato?->imovel) {
                 foreach ($contrato->imovel->getTitularesParaNotificacao() as $t) {
-                    if ($emailService->jaEnviou('admin.cobranca_inquilino_atrasada_proprietario', $t['email'], $cob->referencia)) continue;
+                    if ($emailService->jaEnviou('admin.cobranca_inquilino_atrasada_proprietario', $t['email'], $cob->referencia)) {
+                        continue;
+                    }
                     try {
                         $emailService->enviar('admin.cobranca_inquilino_atrasada_proprietario', $t['email'], $t['nome'], [
                             'nome' => $t['nome'],
@@ -67,7 +69,8 @@ class AtualizarCobrancasAtrasadas implements ShouldQueue
                             'valor_total' => number_format($cob->valor_total, 2, ',', '.'),
                             'dias_atraso' => $diasAtraso,
                         ], $cob->tenant_id);
-                    } catch (\Throwable $e) { /* silencioso */ }
+                    } catch (\Throwable $e) { /* silencioso */
+                    }
                 }
             }
         }

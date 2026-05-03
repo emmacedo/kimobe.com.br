@@ -8,7 +8,7 @@ import { GerenciadorTitulares } from '@/components/gerenciador-titulares';
 import { ImovelForm, condominioVazio, type ImovelFormData } from '@/components/imovel-form';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Administradora, Condominio, ImovelFoto, Titularidade } from '@/types/models';
+import type { Condominio, EntidadeExterna, ImovelFoto, Titularidade } from '@/types/models';
 
 type ImovelData = {
     id: number;
@@ -37,13 +37,13 @@ type ImovelData = {
 
 type Props = {
     imovel: ImovelData;
-    administradoras: Administradora[];
+    entidadesExternas: EntidadeExterna[];
     errors?: Record<string, string>;
 };
 
 export default function EditarImovel({
     imovel,
-    administradoras,
+    entidadesExternas,
     errors = {},
 }: Props) {
     const { flash } = usePage().props as any;
@@ -76,7 +76,7 @@ export default function EditarImovel({
         observacoes: imovel.observacoes ?? '',
         condominio: imovel.condominio
             ? {
-                  administradora_id: imovel.condominio.administradora_id,
+                  entidade_externa_id: imovel.condominio.entidade_externa_id,
                   dia_vencimento: imovel.condominio.dia_vencimento,
                   valor: imovel.condominio.valor ? parseFloat(imovel.condominio.valor) : null,
                   acesso_login: imovel.condominio.acesso_login ?? '',
@@ -122,7 +122,7 @@ export default function EditarImovel({
 
                 <ImovelForm
                     dados={dadosIniciais}
-                    administradoras={administradoras}
+                    entidadesExternas={entidadesExternas}
                     errors={errors}
                     processing={processing}
                     onSubmit={handleSubmit}

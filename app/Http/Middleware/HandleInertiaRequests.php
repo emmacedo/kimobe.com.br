@@ -112,7 +112,7 @@ class HandleInertiaRequests extends Middleware
         return [
             'manage_imoveis' => $isAdmin,
             'manage_contratos' => $isAdmin,
-            'manage_cobrancas' => $isAdmin,
+            'manage_faturas' => $isAdmin,
             'manage_repasses' => $isAdmin,
             'upload_comprovantes' => $isAdmin || $isInquilino,
             'view_repasses' => $isAdmin || $isProprietario,

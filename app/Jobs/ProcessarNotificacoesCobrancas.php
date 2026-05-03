@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\Cobranca;
 use App\Models\Contrato;
+use App\Models\Fatura;
 use App\Models\Tenant;
 use App\Services\EmailNotificationService;
 use App\Services\TenantService;
@@ -42,14 +42,14 @@ class ProcessarNotificacoesCobrancas implements ShouldQueue
         }
 
         $tenantService->clearTenant();
-        Log::info('NotificacoesCobrancas: ' . json_encode($this->resultado));
+        Log::info('NotificacoesCobrancas: '.json_encode($this->resultado));
     }
 
     private function enviarLembretesCobranca(Tenant $tenant, EmailNotificationService $es): void
     {
         $diasAviso = 3; // dias antes do vencimento
 
-        $cobrancas = Cobranca::where('status', 'pendente')
+        $cobrancas = Fatura::where('status', 'pendente')
             ->whereDate('data_vencimento', Carbon::today()->addDays($diasAviso))
             ->with(['contrato.inquilino.user', 'contrato.imovel'])
             ->get();
@@ -85,7 +85,9 @@ class ProcessarNotificacoesCobrancas implements ShouldQueue
             $dias = (int) Carbon::today()->diffInDays($c->data_fim);
             $ref = "contrato_{$c->id}";
 
-            if (! $email || $es->jaEnviou('admin.contrato_vencendo', $email, $ref)) continue;
+            if (! $email || $es->jaEnviou('admin.contrato_vencendo', $email, $ref)) {
+                continue;
+            }
 
             $es->enviar('admin.contrato_vencendo', $email, $c->getNomeInquilino() ?? '', [
                 'nome' => $c->getNomeInquilino(),
@@ -106,11 +108,15 @@ class ProcessarNotificacoesCobrancas implements ShouldQueue
             ->get();
 
         $admin = $tenant->getAdminPrincipal();
-        if (! $admin) return;
+        if (! $admin) {
+            return;
+        }
 
         foreach ($contratos as $c) {
             $ref = "contrato_{$c->id}";
-            if ($es->jaEnviou('admin.contrato_vencendo_admin', $admin->email, $ref)) continue;
+            if ($es->jaEnviou('admin.contrato_vencendo_admin', $admin->email, $ref)) {
+                continue;
+            }
 
             $dias = (int) Carbon::today()->diffInDays($c->data_fim);
 

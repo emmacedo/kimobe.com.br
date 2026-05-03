@@ -2,15 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCreator;
 use App\Models\Concerns\BelongsToTenant;
+use App\Observers\ContratoObserver;
 use Database\Factories\ContratoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
     'imovel_id', 'inquilino_vinculo_id', 'data_inicio', 'data_fim', 'valor_aluguel',
@@ -18,11 +23,31 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'indice_reajuste', 'mes_reajuste', 'multa_atraso_pct', 'juros_atraso_pct_dia',
     'dias_carencia', 'multa_rescisoria_pct', 'desconto_pontualidade_pct',
     'tipo_garantia', 'status', 'observacoes',
+    'criado_por_user_id', 'atualizado_por_user_id',
 ])]
+#[ObservedBy([ContratoObserver::class])]
 class Contrato extends Model
 {
     /** @use HasFactory<ContratoFactory> */
-    use BelongsToTenant, HasFactory, SoftDeletes;
+    use BelongsToCreator, BelongsToTenant, HasFactory, LogsActivity, SoftDeletes;
+
+    /**
+     * Auditoria genérica via spatie/laravel-activitylog (Camada 2).
+     * Campos críticos (valor_aluguel, taxa_administracao_pct, modelo_repasse, status,
+     * data_fim) são cobertos pela Camada 3 — tabelas dedicadas — e ficam fora daqui.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'multa_atraso_pct', 'juros_atraso_pct_dia', 'dias_carencia',
+                'multa_rescisoria_pct', 'desconto_pontualidade_pct',
+                'indice_reajuste', 'mes_reajuste', 'dia_vencimento',
+                'tipo_garantia', 'observacoes',
+            ])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     protected $table = 'contratos';
 
@@ -77,14 +102,6 @@ class Contrato extends Model
     }
 
     /**
-     * Responsabilidades financeiras do contrato (IPTU, condomínio, etc.).
-     */
-    public function responsabilidades(): HasMany
-    {
-        return $this->hasMany(ContratoResponsabilidade::class);
-    }
-
-    /**
      * Garantia locatícia do contrato.
      */
     public function garantia(): HasOne
@@ -101,11 +118,38 @@ class Contrato extends Model
     }
 
     /**
-     * Cobranças mensais geradas a partir deste contrato.
+     * Faturas mensais geradas a partir deste contrato.
      */
-    public function cobrancas(): HasMany
+    public function faturas(): HasMany
     {
-        return $this->hasMany(Cobranca::class);
+        return $this->hasMany(Fatura::class);
+    }
+
+    /**
+     * Itens de cobrança vinculados a este contrato (modelo unificado: aluguel,
+     * responsabilidades, parcelados e avulsos). Substitui gradualmente a relação
+     * `responsabilidades`, que será removida quando contrato_responsabilidades for dropada.
+     */
+    public function itensCobranca(): HasMany
+    {
+        return $this->hasMany(ItemCobranca::class);
+    }
+
+    /**
+     * Histórico de reajustes aplicados ao valor_aluguel deste contrato (Camada 3 — auditoria estruturada).
+     */
+    public function reajustes(): HasMany
+    {
+        return $this->hasMany(ContratoReajuste::class)->orderBy('data_aplicacao', 'desc');
+    }
+
+    /**
+     * Histórico de alterações em campos críticos não-financeiros (taxa_administracao_pct,
+     * modelo_repasse, status, data_fim) capturadas pelo ContratoObserver.
+     */
+    public function alteracoes(): HasMany
+    {
+        return $this->hasMany(ContratoAlteracao::class)->orderBy('alterado_em', 'desc');
     }
 
     public function getEmailInquilino(): ?string
