@@ -315,7 +315,7 @@ export default function MostrarImovel({ imovel }: Props) {
                                 {(imovel.condominio.acesso_login || imovel.condominio.acesso_descricao) && (
                                     <div className="mt-4 rounded-md border border-dashed border-[#D8DCDA] bg-[#FAFBFA] p-3">
                                         <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-[#8A918E]">
-                                            Acesso ao sistema
+                                            Acesso ao portal da administradora do condomínio
                                         </p>
                                         <div className="grid gap-2 sm:grid-cols-2">
                                             {imovel.condominio.acesso_login && (

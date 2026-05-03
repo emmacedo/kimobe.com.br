@@ -434,7 +434,7 @@ export function ImovelForm({
                     {/* Sub-bloco: dados de acesso (opcional) */}
                     <div className="rounded-md border border-dashed border-[#D8DCDA] bg-[#FAFBFA] p-4">
                         <p className="mb-3 text-xs font-medium uppercase tracking-wider text-[#8A918E]">
-                            Dados de acesso ao sistema da administradora
+                            Dados de acesso ao portal da administradora do condomínio
                         </p>
                         <div className="space-y-3">
                             <div className="grid gap-3 sm:grid-cols-2">
