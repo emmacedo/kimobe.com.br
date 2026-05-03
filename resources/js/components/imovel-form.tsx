@@ -442,10 +442,12 @@ export function ImovelForm({
                                     <Label htmlFor="acesso_login">Login</Label>
                                     <Input
                                         id="acesso_login"
+                                        name="condominio_acesso_login"
                                         value={form.condominio.acesso_login}
                                         onChange={(e) => setCondominioField('acesso_login', e.target.value)}
                                         placeholder="Usuário do portal"
-                                        autoComplete="off"
+                                        autoComplete="new-password"
+                                        data-form-type="other"
                                         className="bg-white border-[#D8DCDA]"
                                     />
                                     <InputError message={errors['condominio.acesso_login']} />
@@ -455,11 +457,13 @@ export function ImovelForm({
                                     <div className="relative">
                                         <Input
                                             id="acesso_senha"
+                                            name="condominio_acesso_senha"
                                             type={verSenha ? 'text' : 'password'}
                                             value={form.condominio.acesso_senha}
                                             onChange={(e) => setCondominioField('acesso_senha', e.target.value)}
                                             placeholder="Senha do portal"
-                                            autoComplete="off"
+                                            autoComplete="new-password"
+                                            data-form-type="other"
                                             className="bg-white border-[#D8DCDA] pr-10"
                                         />
                                         <button
