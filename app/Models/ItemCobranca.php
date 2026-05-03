@@ -25,6 +25,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'num_parcela',
     'num_parcelas_total',
     'valor_unitario',
+    'dia_vencimento',
     'mes_referencia',
     'visivel_inquilino',
     'status',
@@ -45,7 +46,7 @@ class ItemCobranca extends Model
         return LogOptions::defaults()
             ->logOnly([
                 'descricao', 'pagante', 'recebedor', 'entidade_externa_id',
-                'valor_unitario', 'visivel_inquilino', 'status',
+                'valor_unitario', 'dia_vencimento', 'visivel_inquilino', 'status',
                 'data_pagamento_externo', 'observacoes',
             ])
             ->logOnlyDirty()
@@ -67,6 +68,7 @@ class ItemCobranca extends Model
             'num_parcela' => 'integer',
             'num_parcelas_total' => 'integer',
             'valor_unitario' => 'decimal:2',
+            'dia_vencimento' => 'integer',
             'visivel_inquilino' => 'boolean',
             'status' => 'string',
             'data_pagamento_externo' => 'date',

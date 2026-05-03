@@ -44,6 +44,7 @@ class StoreItemCobrancaRequest extends FormRequest
                 Rule::requiredIf(fn () => $this->input('tipo') === 'parcelado'),
             ],
             'valor_unitario' => ['required', 'numeric'],
+            'dia_vencimento' => ['nullable', 'integer', 'between:1,28'],
             'mes_referencia' => ['required', 'string', 'regex:/^\d{2}\/\d{4}$/'],
             'visivel_inquilino' => ['nullable', 'boolean'],
             'observacoes' => ['nullable', 'string', 'max:5000'],
@@ -63,6 +64,8 @@ class StoreItemCobrancaRequest extends FormRequest
             'periodicidade.required' => 'Itens recorrentes exigem periodicidade.',
             'num_parcelas_total.required' => 'Itens parcelados exigem número de parcelas.',
             'mes_referencia.regex' => 'Mês de referência deve ser MM/YYYY (ex: 07/2026).',
+            'dia_vencimento.integer' => 'Dia de vencimento deve ser um número.',
+            'dia_vencimento.between' => 'Dia de vencimento deve estar entre 1 e 28.',
             'entidade_externa_id.exists' => 'Entidade externa selecionada é inválida.',
         ];
     }

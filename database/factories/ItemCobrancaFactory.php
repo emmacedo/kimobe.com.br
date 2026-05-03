@@ -37,6 +37,7 @@ class ItemCobrancaFactory extends Factory
             'num_parcela' => null,
             'num_parcelas_total' => null,
             'valor_unitario' => $this->faker->randomFloat(2, 100, 5000),
+            'dia_vencimento' => null,
             'mes_referencia' => str_pad((string) $mes, 2, '0', STR_PAD_LEFT).'/'.$ano,
             'visivel_inquilino' => true,
             'status' => 'pendente',

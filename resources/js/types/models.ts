@@ -147,6 +147,7 @@ export interface ItemCobranca {
     num_parcela: number | null;
     num_parcelas_total: number | null;
     valor_unitario: string;
+    dia_vencimento: number | null;
     mes_referencia: string;
     visivel_inquilino: boolean;
     status: StatusItemCobranca;

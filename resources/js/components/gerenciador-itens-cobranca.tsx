@@ -71,6 +71,7 @@ type FormState = {
     periodicidade: PeriodicidadeItemCobranca;
     num_parcelas_total: number;
     valor_unitario: number | null;
+    dia_vencimento: number | null;
     mes_referencia: string;
     visivel_inquilino: boolean;
     observacoes: string;
@@ -143,6 +144,7 @@ const FORM_INICIAL: FormState = {
     periodicidade: 'mensal',
     num_parcelas_total: 12,
     valor_unitario: null,
+    dia_vencimento: null,
     mes_referencia: '',
     visivel_inquilino: true,
     observacoes: '',
@@ -156,6 +158,7 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
     const [editTarget, setEditTarget] = useState<ItemCobranca | null>(null);
     const [editEscopo, setEditEscopo] = useState<EscopoEdicao>('futuras');
     const [editValor, setEditValor] = useState<number | null>(null);
+    const [editDiaVencimento, setEditDiaVencimento] = useState<number | null>(null);
     const [editSaving, setEditSaving] = useState(false);
     const [cancelTarget, setCancelTarget] = useState<ItemCobranca | null>(null);
     const [cancelarSerie, setCancelarSerie] = useState(false);
@@ -191,6 +194,7 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
             entidade_externa_id: form.entidade_externa_id,
             tipo: form.tipo,
             valor_unitario: form.valor_unitario,
+            dia_vencimento: form.dia_vencimento,
             mes_referencia: form.mes_referencia,
             visivel_inquilino: form.visivel_inquilino,
             observacoes: form.observacoes || null,
@@ -245,7 +249,11 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
                     'X-CSRF-TOKEN': getCsrfToken(),
                     Accept: 'application/json',
                 },
-                body: JSON.stringify({ escopo: editEscopo, valor_unitario: editValor }),
+                body: JSON.stringify({
+                    escopo: editEscopo,
+                    valor_unitario: editValor,
+                    dia_vencimento: editDiaVencimento,
+                }),
             });
             if (!r.ok) {
                 const err = await r.json().catch(() => ({}));
@@ -257,7 +265,11 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
             setEditTarget(null);
             // Atualiza valor exibido na lista do pai (visualização imediata)
             setItens((prev) =>
-                prev.map((i) => (i.id === editTarget.id ? { ...i, valor_unitario: String(editValor) } : i)),
+                prev.map((i) =>
+                    i.id === editTarget.id
+                        ? { ...i, valor_unitario: String(editValor), dia_vencimento: editDiaVencimento }
+                        : i,
+                ),
             );
         } catch {
             toast.error('Erro ao atualizar.');
@@ -304,6 +316,7 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
     function abrirEditar(item: ItemCobranca) {
         setEditTarget(item);
         setEditValor(parseFloat(item.valor_unitario));
+        setEditDiaVencimento(item.dia_vencimento);
         setEditEscopo('futuras');
     }
 
@@ -379,6 +392,7 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
                                     {ROTULOS_PARTE[item.pagante]} → {ROTULOS_PARTE[item.recebedor]}
                                     {item.entidade_externa && ` (via ${item.entidade_externa.nome})`}
                                     {' · início '}{item.mes_referencia}
+                                    {item.dia_vencimento && ` · vence dia ${item.dia_vencimento}`}
                                 </p>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
@@ -410,11 +424,12 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
                     </DialogHeader>
 
                     <div className="grid gap-3">
+                        <div>
+                            <Label>Descrição</Label>
+                            <Input value={form.descricao} onChange={(e) => setF('descricao', e.target.value)} placeholder="Ex: Aluguel" className="bg-white border-[#D8DCDA]" />
+                        </div>
+
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                                <Label>Descrição</Label>
-                                <Input value={form.descricao} onChange={(e) => setF('descricao', e.target.value)} placeholder="Ex: Aluguel" className="bg-white border-[#D8DCDA]" />
-                            </div>
                             <div>
                                 <Label>Primeiro mês de cobrança</Label>
                                 <Input
@@ -423,6 +438,22 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
                                     onChange={(e) => setF('mes_referencia', isoMonthParaMesRef(e.target.value))}
                                     className="bg-white border-[#D8DCDA]"
                                 />
+                            </div>
+                            <div>
+                                <Label>Dia de vencimento (opcional)</Label>
+                                <Select
+                                    value={form.dia_vencimento?.toString() ?? '__nenhum__'}
+                                    onValueChange={(v) => setF('dia_vencimento', v === '__nenhum__' ? null : parseInt(v))}
+                                >
+                                    <SelectTrigger className="bg-white border-[#D8DCDA]"><SelectValue placeholder="—" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__nenhum__">—</SelectItem>
+                                        {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                                            <SelectItem key={d} value={d.toString()}>Dia {d}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="mt-1 text-[10px] text-[#8A918E]">Dias 29-31 não aceitos (meses curtos)</p>
                             </div>
                         </div>
 
@@ -537,15 +568,31 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
             <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Editar valor</DialogTitle>
+                        <DialogTitle>Editar item</DialogTitle>
                         <DialogDescription>
                             {editTarget?.descricao} — escolha o escopo da alteração.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3">
                         <div>
-                            <Label>Novo valor</Label>
+                            <Label>Valor</Label>
                             <InputMoeda value={editValor} onChange={setEditValor} />
+                        </div>
+                        <div>
+                            <Label>Dia de vencimento (opcional)</Label>
+                            <Select
+                                value={editDiaVencimento?.toString() ?? '__nenhum__'}
+                                onValueChange={(v) => setEditDiaVencimento(v === '__nenhum__' ? null : parseInt(v))}
+                            >
+                                <SelectTrigger className="bg-white border-[#D8DCDA]"><SelectValue placeholder="—" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__nenhum__">—</SelectItem>
+                                    {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                                        <SelectItem key={d} value={d.toString()}>Dia {d}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="mt-1 text-[10px] text-[#8A918E]">Dias 29-31 não aceitos (meses curtos)</p>
                         </div>
                         <div>
                             <Label>Escopo</Label>

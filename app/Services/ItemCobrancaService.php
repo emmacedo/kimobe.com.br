@@ -144,6 +144,7 @@ class ItemCobrancaService
             'num_parcela' => $numParcela,
             'num_parcelas_total' => $dados['num_parcelas_total'] ?? null,
             'valor_unitario' => $dados['valor_unitario'],
+            'dia_vencimento' => $dados['dia_vencimento'] ?? null,
             'mes_referencia' => $dados['mes_referencia'],
             'visivel_inquilino' => $dados['visivel_inquilino'],
             'status' => 'pendente',

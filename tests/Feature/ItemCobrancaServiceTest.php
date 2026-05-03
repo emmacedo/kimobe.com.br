@@ -363,3 +363,84 @@ it('aceita entidade_externa em intermediação', function () {
 
     expect($item->entidade_externa_id)->toBe($entidade->id);
 });
+
+it('persiste dia_vencimento informado na criação', function () {
+    $contrato = criarContratoParaItens();
+    $service = app(ItemCobrancaService::class);
+
+    $item = $service->criar($contrato, [
+        'descricao' => 'Condomínio',
+        'pagante' => 'inquilino',
+        'recebedor' => 'administradora',
+        'tipo' => 'avulso',
+        'valor_unitario' => 800.00,
+        'dia_vencimento' => 10,
+        'mes_referencia' => '03/2026',
+    ]);
+
+    expect($item->dia_vencimento)->toBe(10);
+});
+
+it('propaga dia_vencimento para todas as ocorrências pré-geradas de uma série recorrente', function () {
+    $contrato = criarContratoParaItens('2026-01-01', '2026-12-31');
+    $service = app(ItemCobrancaService::class);
+
+    $pai = $service->criar($contrato, [
+        'descricao' => 'Condomínio',
+        'pagante' => 'inquilino',
+        'recebedor' => 'administradora',
+        'tipo' => 'recorrente',
+        'periodicidade' => 'mensal',
+        'valor_unitario' => 800.00,
+        'dia_vencimento' => 15,
+        'mes_referencia' => '01/2026',
+    ]);
+
+    $ocorrencias = ItemCobranca::where('contrato_id', $contrato->id)->get();
+
+    expect($ocorrencias)->toHaveCount(12);
+    expect($ocorrencias->pluck('dia_vencimento')->unique()->all())->toBe([15]);
+    expect($pai->dia_vencimento)->toBe(15);
+});
+
+it('permite criar item sem dia_vencimento (campo opcional)', function () {
+    $contrato = criarContratoParaItens();
+    $service = app(ItemCobrancaService::class);
+
+    $item = $service->criar($contrato, [
+        'descricao' => 'Aluguel',
+        'pagante' => 'inquilino',
+        'recebedor' => 'proprietario',
+        'tipo' => 'avulso',
+        'valor_unitario' => 1500.00,
+        'mes_referencia' => '03/2026',
+    ]);
+
+    expect($item->dia_vencimento)->toBeNull();
+});
+
+it('atualiza dia_vencimento de toda a série quando escopo é todas', function () {
+    $contrato = criarContratoParaItens('2026-01-01', '2026-06-30');
+    $service = app(ItemCobrancaService::class);
+
+    $pai = $service->criar($contrato, [
+        'descricao' => 'Condomínio',
+        'pagante' => 'inquilino',
+        'recebedor' => 'administradora',
+        'tipo' => 'recorrente',
+        'periodicidade' => 'mensal',
+        'valor_unitario' => 800.00,
+        'dia_vencimento' => 5,
+        'mes_referencia' => '01/2026',
+    ]);
+
+    $service->atualizarTodas($pai, ['dia_vencimento' => 20]);
+
+    $diasUnicos = ItemCobranca::where('contrato_id', $contrato->id)
+        ->where('status', 'pendente')
+        ->pluck('dia_vencimento')
+        ->unique()
+        ->all();
+
+    expect($diasUnicos)->toBe([20]);
+});

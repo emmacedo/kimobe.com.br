@@ -32,6 +32,7 @@ class UpdateItemCobrancaRequest extends FormRequest
             'recebedor' => ['sometimes', Rule::in(['inquilino', 'proprietario', 'administradora'])],
             'entidade_externa_id' => ['nullable', 'integer', 'exists:entidades_externas,id'],
             'valor_unitario' => ['sometimes', 'numeric'],
+            'dia_vencimento' => ['sometimes', 'nullable', 'integer', 'between:1,28'],
             'visivel_inquilino' => ['sometimes', 'boolean'],
             'observacoes' => ['nullable', 'string', 'max:5000'],
         ];
@@ -45,6 +46,8 @@ class UpdateItemCobrancaRequest extends FormRequest
         return [
             'escopo.required' => 'Defina o escopo: somente, futuras ou todas.',
             'escopo.in' => 'Escopo inválido. Use somente, futuras ou todas.',
+            'dia_vencimento.integer' => 'Dia de vencimento deve ser um número.',
+            'dia_vencimento.between' => 'Dia de vencimento deve estar entre 1 e 28.',
             'entidade_externa_id.exists' => 'Entidade externa selecionada é inválida.',
         ];
     }
