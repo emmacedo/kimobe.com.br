@@ -11,6 +11,7 @@ use App\Models\Imovel;
 use App\Models\ItemCobranca;
 use App\Models\Vinculo;
 use App\Services\ContratoAuditoriaService;
+use App\Services\ItemCobrancaService;
 use App\Services\NotificacaoAdminService;
 use App\Services\TenantService;
 use App\Traits\ScopesPorPapel;
@@ -170,33 +171,53 @@ class ContratoController extends Controller
             'garantia_numero_titulo', 'garantia_data_inicio', 'garantia_data_fim',
         ])->toArray();
 
-        $contrato = DB::transaction(function () use ($contratoData, $inquilinos, $garantiaDados, $dados, $tenantId) {
-            $contrato = Contrato::create($contratoData);
+        try {
+            $contrato = DB::transaction(function () use ($contratoData, $inquilinos, $garantiaDados, $dados, $tenantId) {
+                $contrato = Contrato::create($contratoData);
 
-            // Popula a pivot contrato_inquilinos com todos os inquilinos do contrato.
-            foreach ($inquilinos as $inq) {
-                $contrato->inquilinos()->create([
-                    'tenant_id' => $tenantId,
-                    'vinculo_id' => $inq['vinculo_id'],
-                    'principal' => $inq['principal'],
+                // Popula a pivot contrato_inquilinos com todos os inquilinos do contrato.
+                foreach ($inquilinos as $inq) {
+                    $contrato->inquilinos()->create([
+                        'tenant_id' => $tenantId,
+                        'vinculo_id' => $inq['vinculo_id'],
+                        'principal' => $inq['principal'],
+                    ]);
+                }
+
+                // Garantia (exceto fiador — que é cadastrado depois — e sem_garantia)
+                if ($garantiaDados && ! in_array($dados['tipo_garantia'], ['sem_garantia', 'fiador'])) {
+                    Garantia::create([
+                        'tenant_id' => $tenantId,
+                        'contrato_id' => $contrato->id,
+                        'tipo' => $dados['tipo_garantia'],
+                        ...$garantiaDados,
+                    ]);
+                }
+
+                // Marca imóvel como alugado.
+                Imovel::where('id', $dados['imovel_id'])->update(['status' => 'alugado']);
+
+                // Gera automaticamente o item de cobrança recorrente "Aluguel" — pré-gera
+                // todas as ocorrências mensais até data_fim.
+                $this->gerarItemAluguelInicial($contrato);
+
+                return $contrato;
+            });
+        } catch (\DomainException $e) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'contrato' => "Não foi possível gerar o item de cobrança 'Aluguel' automaticamente: {$e->getMessage()}. Verifique os dados do contrato e tente novamente. Nenhuma informação foi salva.",
                 ]);
-            }
+        } catch (\Throwable $e) {
+            Log::error("Falha ao criar contrato: {$e->getMessage()}", ['exception' => $e]);
 
-            // Garantia (exceto fiador — que é cadastrado depois — e sem_garantia)
-            if ($garantiaDados && ! in_array($dados['tipo_garantia'], ['sem_garantia', 'fiador'])) {
-                Garantia::create([
-                    'tenant_id' => $tenantId,
-                    'contrato_id' => $contrato->id,
-                    'tipo' => $dados['tipo_garantia'],
-                    ...$garantiaDados,
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'contrato' => 'Ocorreu um erro inesperado ao criar o contrato. Nenhuma informação foi salva. Por favor, tente novamente em alguns instantes.',
                 ]);
-            }
-
-            // Marca imóvel como alugado.
-            Imovel::where('id', $dados['imovel_id'])->update(['status' => 'alugado']);
-
-            return $contrato;
-        });
+        }
 
         // Notificar proprietários sobre novo contrato (fora da transação para não rollback em falha de email)
         try {
@@ -390,5 +411,24 @@ class ContratoController extends Controller
             'data_fim' => $dados['garantia_data_fim'] ?? null,
             'status' => 'ativo',
         ];
+    }
+
+    /**
+     * Cria a série recorrente mensal de "Aluguel" para o contrato recém-criado.
+     * Pré-gera ocorrências de `data_inicio` até `data_fim` via ItemCobrancaService.
+     */
+    private function gerarItemAluguelInicial(Contrato $contrato): void
+    {
+        app(ItemCobrancaService::class)->criar($contrato, [
+            'descricao' => 'Aluguel',
+            'pagante' => 'inquilino',
+            'recebedor' => 'proprietario',
+            'tipo' => 'recorrente',
+            'periodicidade' => 'mensal',
+            'valor_unitario' => $contrato->valor_aluguel,
+            'dia_vencimento' => $contrato->dia_vencimento,
+            'mes_referencia' => $contrato->data_inicio->format('m/Y'),
+            'visivel_inquilino' => true,
+        ]);
     }
 }

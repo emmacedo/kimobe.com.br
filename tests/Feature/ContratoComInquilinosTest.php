@@ -3,6 +3,7 @@
 use App\Models\Contrato;
 use App\Models\ContratoInquilino;
 use App\Models\Imovel;
+use App\Models\ItemCobranca;
 use App\Models\User;
 use App\Models\Vinculo;
 
@@ -192,4 +193,108 @@ test('inquilino de outro tenant é rejeitado', function () {
         ]));
 
     $response->assertSessionHasErrors(['inquilinos.0.vinculo_id']);
+});
+
+test('criação de contrato gera item de cobrança recorrente "Aluguel" automaticamente', function () {
+    [$tenant, $admin] = setupTenantComAdmin();
+    $imovel = Imovel::factory()->create(['tenant_id' => $tenant->id, 'status' => 'disponivel']);
+    $inq = criarInquilinoVinculo($tenant->id);
+
+    $this->actingAs($admin)
+        ->withSession(['tenant_id' => $tenant->id])
+        ->post('/contratos', array_merge(dadosContratoBase(), [
+            'imovel_id' => $imovel->id,
+            'inquilinos' => [['vinculo_id' => $inq->id, 'principal' => true]],
+        ]))
+        ->assertSessionHasNoErrors();
+
+    $contrato = Contrato::where('imovel_id', $imovel->id)->first();
+    $aluguelPai = ItemCobranca::where('contrato_id', $contrato->id)
+        ->whereNull('parent_item_id')
+        ->where('descricao', 'Aluguel')
+        ->first();
+
+    expect($aluguelPai)->not->toBeNull();
+    expect($aluguelPai->tipo)->toBe('recorrente');
+    expect($aluguelPai->periodicidade)->toBe('mensal');
+    expect($aluguelPai->pagante)->toBe('inquilino');
+    expect($aluguelPai->recebedor)->toBe('proprietario');
+});
+
+test('item de aluguel gerado herda valor_aluguel, dia_vencimento e mes_referencia do contrato', function () {
+    [$tenant, $admin] = setupTenantComAdmin();
+    $imovel = Imovel::factory()->create(['tenant_id' => $tenant->id, 'status' => 'disponivel']);
+    $inq = criarInquilinoVinculo($tenant->id);
+
+    $this->actingAs($admin)
+        ->withSession(['tenant_id' => $tenant->id])
+        ->post('/contratos', array_merge(dadosContratoBase(), [
+            'imovel_id' => $imovel->id,
+            'data_inicio' => '2026-03-15',
+            'data_fim' => '2026-12-31',
+            'valor_aluguel' => 2500.00,
+            'dia_vencimento' => 7,
+            'inquilinos' => [['vinculo_id' => $inq->id, 'principal' => true]],
+        ]))
+        ->assertSessionHasNoErrors();
+
+    $contrato = Contrato::where('imovel_id', $imovel->id)->first();
+    $aluguelPai = ItemCobranca::where('contrato_id', $contrato->id)
+        ->whereNull('parent_item_id')
+        ->where('descricao', 'Aluguel')
+        ->first();
+
+    expect((float) $aluguelPai->valor_unitario)->toBe(2500.00);
+    expect($aluguelPai->dia_vencimento)->toBe(7);
+    expect($aluguelPai->mes_referencia)->toBe('03/2026');
+});
+
+test('série de aluguel pré-gera ocorrências até data_fim do contrato', function () {
+    [$tenant, $admin] = setupTenantComAdmin();
+    $imovel = Imovel::factory()->create(['tenant_id' => $tenant->id, 'status' => 'disponivel']);
+    $inq = criarInquilinoVinculo($tenant->id);
+
+    // 24 meses: jan/2026 a dez/2027
+    $this->actingAs($admin)
+        ->withSession(['tenant_id' => $tenant->id])
+        ->post('/contratos', array_merge(dadosContratoBase(), [
+            'imovel_id' => $imovel->id,
+            'data_inicio' => '2026-01-01',
+            'data_fim' => '2027-12-31',
+            'inquilinos' => [['vinculo_id' => $inq->id, 'principal' => true]],
+        ]))
+        ->assertSessionHasNoErrors();
+
+    $contrato = Contrato::where('imovel_id', $imovel->id)->first();
+    $totalOcorrencias = ItemCobranca::where('contrato_id', $contrato->id)
+        ->where('descricao', 'Aluguel')
+        ->count();
+
+    expect($totalOcorrencias)->toBe(24);
+});
+
+test('contrato com data_inicio retroativa gera ocorrências dos meses passados', function () {
+    [$tenant, $admin] = setupTenantComAdmin();
+    $imovel = Imovel::factory()->create(['tenant_id' => $tenant->id, 'status' => 'disponivel']);
+    $inq = criarInquilinoVinculo($tenant->id);
+
+    $this->actingAs($admin)
+        ->withSession(['tenant_id' => $tenant->id])
+        ->post('/contratos', array_merge(dadosContratoBase(), [
+            'imovel_id' => $imovel->id,
+            'data_inicio' => '2025-10-01',
+            'data_fim' => '2026-03-31',
+            'inquilinos' => [['vinculo_id' => $inq->id, 'principal' => true]],
+        ]))
+        ->assertSessionHasNoErrors();
+
+    $contrato = Contrato::where('imovel_id', $imovel->id)->first();
+
+    // Deve haver ocorrência com mes_referencia=10/2025 (passada)
+    $temMesPassado = ItemCobranca::where('contrato_id', $contrato->id)
+        ->where('descricao', 'Aluguel')
+        ->where('mes_referencia', '10/2025')
+        ->exists();
+
+    expect($temMesPassado)->toBeTrue();
 });
