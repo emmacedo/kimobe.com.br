@@ -255,11 +255,25 @@ class ContratoController extends Controller
             $timeline = app(ContratoAuditoriaService::class)->montarTimeline($contrato);
         }
 
+        // Gerenciador de itens de cobrança — apenas admin (operação rotineira)
+        $itensCobranca = null;
+        $entidadesExternas = null;
+        if ($this->isAdmin()) {
+            $itensCobranca = ItemCobranca::where('contrato_id', $contrato->id)
+                ->whereNull('parent_item_id')
+                ->with('entidadeExterna:id,nome,tipo')
+                ->orderBy('created_at', 'desc')
+                ->get();
+            $entidadesExternas = EntidadeExterna::orderBy('nome')->get();
+        }
+
         return Inertia::render('contratos/mostrar', [
             'contrato' => $contrato,
             'faturasRecentes' => $faturas,
             'contatoAdmin' => $contatoAdmin,
             'timelineAuditoria' => $timeline,
+            'itensCobranca' => $itensCobranca,
+            'entidadesExternas' => $entidadesExternas,
         ]);
     }
 
@@ -276,19 +290,8 @@ class ContratoController extends Controller
             'fiadores',
         ]);
 
-        // Apenas as séries (parent_item_id IS NULL) são listadas no gerenciador.
-        $itensSeries = ItemCobranca::where('contrato_id', $contrato->id)
-            ->whereNull('parent_item_id')
-            ->with('entidadeExterna:id,nome,tipo')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $entidadesExternas = EntidadeExterna::orderBy('nome')->get();
-
         return Inertia::render('contratos/editar', [
             'contrato' => $contrato,
-            'itensCobranca' => $itensSeries,
-            'entidadesExternas' => $entidadesExternas,
         ]);
     }
 

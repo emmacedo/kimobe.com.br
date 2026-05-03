@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FiadorDetalhesDialog } from '@/components/fiador-detalhes-dialog';
+import { GerenciadorItensCobranca } from '@/components/gerenciador-itens-cobranca';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { formataMoeda } from '@/lib/utils';
+import type { EntidadeExterna, ItemCobranca } from '@/types/models';
 
 // Labels
 const indiceLabels: Record<string, string> = { igpm: 'IGPM', ipca: 'IPCA', fixo: 'Fixo', manual: 'Manual' };
@@ -79,11 +81,13 @@ type Props = {
     faturasRecentes: any[];
     contatoAdmin?: { nome: string; email: string } | null;
     timelineAuditoria?: EventoAuditoria[] | null;
+    itensCobranca?: ItemCobranca[] | null;
+    entidadesExternas?: EntidadeExterna[] | null;
 };
 
-export default function MostrarContrato({ contrato, faturasRecentes, contatoAdmin, timelineAuditoria }: Props) {
+export default function MostrarContrato({ contrato, faturasRecentes, contatoAdmin, timelineAuditoria, itensCobranca, entidadesExternas }: Props) {
     const { flash } = usePage().props as any;
-    const { can, isInquilino } = usePermissions();
+    const { can, isInquilino, isAdmin } = usePermissions();
     const [actionTarget, setActionTarget] = useState<'encerrar' | 'cancelar' | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [fiadorDialog, setFiadorDialog] = useState<any>(null);
@@ -444,6 +448,15 @@ export default function MostrarContrato({ contrato, faturasRecentes, contatoAdmi
                                     </ol>
                                 )}
                             </div>
+                        )}
+
+                        {/* Itens de cobrança (gerenciador) — apenas admin */}
+                        {isAdmin && (
+                            <GerenciadorItensCobranca
+                                contratoId={contrato.id}
+                                itensIniciais={itensCobranca ?? []}
+                                entidadesExternas={entidadesExternas ?? []}
+                            />
                         )}
 
                         {/* Cobranças recentes */}

@@ -1,5 +1,5 @@
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { InputMoeda } from '@/components/input-moeda';
@@ -76,6 +76,46 @@ type FormState = {
     observacoes: string;
 };
 
+type AbaVigencia = 'vigentes' | 'passados';
+
+function mesRefParaInt(mesRef: string): number | null {
+    const partes = mesRef.split('/');
+    if (partes.length !== 2) return null;
+    const mes = Number(partes[0]);
+    const ano = Number(partes[1]);
+    if (!Number.isFinite(mes) || !Number.isFinite(ano)) return null;
+    return ano * 100 + mes;
+}
+
+function hojeAnoMesInt(): number {
+    const d = new Date();
+    return d.getFullYear() * 100 + (d.getMonth() + 1);
+}
+
+export function isItemVigente(item: ItemCobranca): boolean {
+    if (item.status === 'cancelado') return false;
+    if (item.tipo === 'recorrente') return true;
+
+    const inicio = mesRefParaInt(item.mes_referencia);
+    if (inicio === null) return false;
+    const hoje = hojeAnoMesInt();
+
+    if (item.tipo === 'avulso') {
+        return inicio >= hoje;
+    }
+
+    if (item.tipo === 'parcelado' && item.num_parcelas_total) {
+        // Última parcela: mes_referencia + (num_parcelas_total - 1) meses, com overflow correto via Date
+        const mesIni = inicio % 100;
+        const anoIni = Math.floor(inicio / 100);
+        const dataFim = new Date(anoIni, mesIni - 1 + item.num_parcelas_total - 1, 1);
+        const fim = dataFim.getFullYear() * 100 + (dataFim.getMonth() + 1);
+        return fim >= hoje;
+    }
+
+    return true;
+}
+
 const FORM_INICIAL: FormState = {
     descricao: '',
     pagante: 'inquilino',
@@ -102,6 +142,19 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
     const [cancelTarget, setCancelTarget] = useState<ItemCobranca | null>(null);
     const [cancelarSerie, setCancelarSerie] = useState(false);
     const [cancelLoading, setCancelLoading] = useState(false);
+    const [aba, setAba] = useState<AbaVigencia>('vigentes');
+
+    const { vigentes, passados } = useMemo(() => {
+        const v: ItemCobranca[] = [];
+        const p: ItemCobranca[] = [];
+        for (const item of itens) {
+            if (isItemVigente(item)) v.push(item);
+            else p.push(item);
+        }
+        return { vigentes: v, passados: p };
+    }, [itens]);
+
+    const itensFiltrados = aba === 'vigentes' ? vigentes : passados;
 
     function setF<K extends keyof FormState>(k: K, v: FormState[K]) {
         setForm((p) => ({ ...p, [k]: v }));
@@ -149,6 +202,9 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
             }
             const novo: ItemCobranca = await r.json();
             setItens((prev) => [novo, ...prev]);
+            // Se o item criado não está na aba ativa, troca pra mostrar onde ele caiu
+            const abaDoNovo: AbaVigencia = isItemVigente(novo) ? 'vigentes' : 'passados';
+            if (abaDoNovo !== aba) setAba(abaDoNovo);
             setForm(FORM_INICIAL);
             setCriarOpen(false);
             toast.success('Item criado.');
@@ -245,7 +301,7 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
 
     return (
         <div className="rounded-[10px] border border-[#D8DCDA] bg-white p-5">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 className="text-sm font-medium text-[#1E2D30]">Itens de cobrança</h2>
                 {!readOnly && (
                     <Button variant="outline" size="sm" onClick={() => setCriarOpen(true)} className="border-[#D8DCDA]">
@@ -255,11 +311,40 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
                 )}
             </div>
 
-            {itens.length === 0 ? (
-                <p className="text-sm text-[#8A918E]">Nenhum item cadastrado. Adicione aluguel, condomínio, IPTU, taxas extras, etc.</p>
+            <div className="mb-3 flex gap-1 border-b border-[#EEF0EF]">
+                <button
+                    type="button"
+                    onClick={() => setAba('vigentes')}
+                    className={`relative -mb-px px-3 py-1.5 text-xs font-medium transition-colors ${
+                        aba === 'vigentes'
+                            ? 'border-b-2 border-[#0A4F5C] text-[#0A4F5C]'
+                            : 'border-b-2 border-transparent text-[#6B7370] hover:text-[#1E2D30]'
+                    }`}
+                >
+                    Vigentes <span className="ml-1 text-[10px] text-[#8A918E]">({vigentes.length})</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setAba('passados')}
+                    className={`relative -mb-px px-3 py-1.5 text-xs font-medium transition-colors ${
+                        aba === 'passados'
+                            ? 'border-b-2 border-[#0A4F5C] text-[#0A4F5C]'
+                            : 'border-b-2 border-transparent text-[#6B7370] hover:text-[#1E2D30]'
+                    }`}
+                >
+                    Passados <span className="ml-1 text-[10px] text-[#8A918E]">({passados.length})</span>
+                </button>
+            </div>
+
+            {itensFiltrados.length === 0 ? (
+                <p className="text-sm text-[#8A918E]">
+                    {aba === 'vigentes'
+                        ? 'Nenhum item vigente. Use "Novo item" para cadastrar aluguel, condomínio, IPTU, etc.'
+                        : 'Nenhum item passado.'}
+                </p>
             ) : (
                 <div className="space-y-2">
-                    {itens.map((item) => (
+                    {itensFiltrados.map((item) => (
                         <div
                             key={item.id}
                             className="flex items-center justify-between rounded-md border border-[#EEF0EF] px-3 py-2 text-sm"

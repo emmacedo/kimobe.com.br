@@ -1,0 +1,1 @@
+function e(){return document.querySelector(`meta[name="csrf-token"]`)?.getAttribute(`content`)??``}export{e as t};
