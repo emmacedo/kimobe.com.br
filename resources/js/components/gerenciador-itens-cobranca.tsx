@@ -92,6 +92,24 @@ function hojeAnoMesInt(): number {
     return d.getFullYear() * 100 + (d.getMonth() + 1);
 }
 
+// Converte "MM/YYYY" (formato do backend) para "YYYY-MM" (formato do <input type="month">)
+function mesRefParaIsoMonth(mesRef: string): string {
+    const partes = mesRef.split('/');
+    if (partes.length !== 2) return '';
+    const [mes, ano] = partes;
+    if (!mes || !ano) return '';
+    return `${ano}-${mes.padStart(2, '0')}`;
+}
+
+// Converte "YYYY-MM" (formato do <input type="month">) para "MM/YYYY" (formato do backend)
+function isoMonthParaMesRef(iso: string): string {
+    if (!iso) return '';
+    const partes = iso.split('-');
+    if (partes.length !== 2) return '';
+    const [ano, mes] = partes;
+    return `${mes}/${ano}`;
+}
+
 export function isItemVigente(item: ItemCobranca): boolean {
     if (item.status === 'cancelado') return false;
     if (item.tipo === 'recorrente') return true;
@@ -398,8 +416,13 @@ export function GerenciadorItensCobranca({ contratoId, itensIniciais, entidadesE
                                 <Input value={form.descricao} onChange={(e) => setF('descricao', e.target.value)} placeholder="Ex: Aluguel" className="bg-white border-[#D8DCDA]" />
                             </div>
                             <div>
-                                <Label>Mês de referência (MM/YYYY)</Label>
-                                <Input value={form.mes_referencia} onChange={(e) => setF('mes_referencia', e.target.value)} placeholder="07/2026" maxLength={7} className="bg-white border-[#D8DCDA]" />
+                                <Label>Primeiro mês de cobrança</Label>
+                                <Input
+                                    type="month"
+                                    value={mesRefParaIsoMonth(form.mes_referencia)}
+                                    onChange={(e) => setF('mes_referencia', isoMonthParaMesRef(e.target.value))}
+                                    className="bg-white border-[#D8DCDA]"
+                                />
                             </div>
                         </div>
 
