@@ -84,6 +84,19 @@ class Fatura extends Model
     }
 
     /**
+     * Converte mês 'Y-m' (ex: '2026-05') para o formato 'MM/YYYY' usado em
+     * Fatura::referencia e ItemCobranca::mes_referencia.
+     */
+    public static function mesParaReferencia(string $mes): string
+    {
+        $partes = explode('-', $mes);
+        $ano = $partes[0] ?? now()->year;
+        $mm = str_pad($partes[1] ?? now()->month, 2, '0', STR_PAD_LEFT);
+
+        return "{$mm}/{$ano}";
+    }
+
+    /**
      * Verifica se a fatura está atrasada (pendente e vencida).
      */
     protected function estaAtrasado(): Attribute

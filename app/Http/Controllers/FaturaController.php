@@ -24,67 +24,84 @@ class FaturaController extends Controller
     ) {}
 
     /**
-     * Listagem de faturas com filtros por período, paginação e cards de resumo.
+     * Listagem por contrato ativo do mês: para cada contrato, exibe a fatura
+     * persistida (se houver) ou um preview calculado a partir dos itens de
+     * cobrança pendentes do mês. Inclui navegação ←/→ por mês.
      */
     public function index(Request $request): Response
     {
-        $mesAno = $request->input('mes', now()->format('Y-m'));
-        $partes = explode('-', $mesAno);
-        $referenciaFiltro = str_pad($partes[1] ?? now()->month, 2, '0', STR_PAD_LEFT).'/'.($partes[0] ?? now()->year);
+        $mes = $request->input('mes', now()->format('Y-m'));
+        $referencia = Fatura::mesParaReferencia($mes);
+        $busca = trim((string) $request->input('busca', ''));
 
-        $query = Fatura::query()
-            ->with(['contrato.imovel', 'contrato.inquilino.user']);
+        $contratosQuery = Contrato::query()->ativo()->with([
+            'imovel',
+            'inquilino.user',
+            'faturas' => fn ($q) => $q->where('referencia', $referencia),
+            'itensCobranca' => fn ($q) => $q
+                ->where('mes_referencia', $referencia)
+                ->where('pagante', 'inquilino'),
+        ]);
+        $this->scopeContratosDoUsuario($contratosQuery);
 
-        $this->scopeFaturasDoUsuario($query);
-
-        $query->where('referencia', $referenciaFiltro);
-
-        if ($busca = $request->input('busca')) {
-            $query->whereHas('contrato', function ($qc) use ($busca) {
-                $qc->whereHas('imovel', fn ($qi) => $qi
+        if ($busca !== '') {
+            $contratosQuery->where(function ($q) use ($busca) {
+                $q->whereHas('imovel', fn ($qi) => $qi
                     ->where('logradouro', 'like', "%{$busca}%")
                     ->orWhere('complemento', 'like', "%{$busca}%")
-                )->orWhereHas('inquilino.user', fn ($qu) => $qu
-                    ->where('name', 'like', "%{$busca}%")
-                );
+                )->orWhereHas('inquilino.user', fn ($qu) => $qu->where('name', 'like', "%{$busca}%"));
             });
         }
 
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        if ($metodo = $request->input('metodo_pagamento')) {
-            $query->where('metodo_pagamento', $metodo);
-        }
-
-        $faturas = $query->orderBy('data_vencimento', 'desc')
-            ->paginate(20)
-            ->withQueryString();
-
-        $baseQuery = Fatura::where('referencia', $referenciaFiltro);
-        $this->scopeFaturasDoUsuario($baseQuery);
-        $resumo = [
-            'a_receber' => (clone $baseQuery)->where('status', 'pendente')->sum('valor_total'),
-            'a_receber_count' => (clone $baseQuery)->where('status', 'pendente')->count(),
-            'recebido' => (clone $baseQuery)->where('status', 'pago')->sum('valor_pago'),
-            'recebido_count' => (clone $baseQuery)->where('status', 'pago')->count(),
-            'em_atraso' => $this->scopeFaturasDoUsuario(Fatura::where('status', 'atrasado'))->sum('valor_total'),
-            'em_atraso_count' => $this->scopeFaturasDoUsuario(Fatura::where('status', 'atrasado'))->count(),
-            'canceladas' => (clone $baseQuery)->where('status', 'cancelado')->sum('valor_total'),
-            'canceladas_count' => (clone $baseQuery)->where('status', 'cancelado')->count(),
-        ];
+        $contratos = $contratosQuery->orderBy('id')->get();
+        $linhas = $contratos->map(fn (Contrato $c) => $this->montarLinhaFatura($c, $mes, $referencia));
 
         return Inertia::render('financeiro/faturas/index', [
-            'faturas' => $faturas,
-            'resumo' => $resumo,
+            'linhas' => $linhas->values(),
             'filtros' => [
-                'mes' => $mesAno,
-                'busca' => $request->input('busca', ''),
-                'status' => $request->input('status', ''),
-                'metodo_pagamento' => $request->input('metodo_pagamento', ''),
+                'mes' => $mes,
+                'busca' => $busca,
             ],
         ]);
+    }
+
+    /**
+     * Monta uma linha da listagem para um contrato no mês: usa Fatura
+     * persistida se existir; caso contrário, calcula preview pelos
+     * ItemCobranca pendentes com pagante='inquilino'.
+     */
+    private function montarLinhaFatura(Contrato $contrato, string $mes, string $referencia): array
+    {
+        $fatura = $contrato->faturas->first();
+
+        $base = [
+            'contrato_id' => $contrato->id,
+            'imovel' => $contrato->getEnderecoCurto(),
+            'inquilino' => $contrato->inquilino?->user?->name ?? '—',
+            'mes_referencia' => $mes,
+        ];
+
+        if ($fatura) {
+            return $base + [
+                'fatura_id' => $fatura->id,
+                'valor' => (float) $fatura->valor_total,
+                'status' => $fatura->status,
+                'data_vencimento' => $fatura->data_vencimento?->toDateString(),
+                'data_pagamento' => $fatura->data_pagamento?->toDateString(),
+                'is_preview' => false,
+            ];
+        }
+
+        $valorPreview = (float) $contrato->itensCobranca->sum('valor_unitario');
+
+        return $base + [
+            'fatura_id' => null,
+            'valor' => $valorPreview,
+            'status' => 'preview',
+            'data_vencimento' => null,
+            'data_pagamento' => null,
+            'is_preview' => true,
+        ];
     }
 
     /**

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Contrato;
+use App\Models\Fatura;
 use App\Models\Repasse;
 use App\Services\NotificacaoAdminService;
 use App\Traits\ScopesPorPapel;
@@ -17,70 +19,93 @@ class RepasseController extends Controller
 {
     use ScopesPorPapel;
 
+    /**
+     * Listagem por contrato ativo do mês: para cada contrato, exibe a soma
+     * dos repasses persistidos (1 linha por contrato, agregando titularidades)
+     * ou um preview calculado a partir das titularidades do imóvel.
+     */
     public function index(Request $request): Response
     {
-        $mesAno = $request->input('mes', now()->format('Y-m'));
+        $mes = $request->input('mes', now()->format('Y-m'));
+        $referencia = Fatura::mesParaReferencia($mes);
+        $busca = trim((string) $request->input('busca', ''));
 
-        $query = Repasse::query()
-            ->with([
-                'titularidade.vinculo.user',
-                'titularidade.dadosBancarios',
-                'fatura.contrato.imovel',
-                'fatura.contrato',
-            ]);
+        $contratosQuery = Contrato::query()->ativo()->with([
+            'imovel.titularidades.vinculo.user',
+            'faturas' => fn ($q) => $q->where('referencia', $referencia)
+                ->with(['repasses.titularidade.vinculo.user']),
+        ]);
+        $this->scopeContratosDoUsuario($contratosQuery);
 
-        // Scoping por papel
-        $this->scopeRepassesDoUsuario($query);
-
-        // Filtro por período: repasses com data_prevista no mês selecionado
-        $partes = explode('-', $mesAno);
-        $ano = $partes[0] ?? now()->year;
-        $mes = $partes[1] ?? now()->month;
-        $query->whereYear('data_prevista', $ano)->whereMonth('data_prevista', $mes);
-
-        if ($busca = $request->input('busca')) {
-            $query->where(function ($q) use ($busca) {
-                $q->whereHas('titularidade.vinculo.user', fn ($qu) => $qu->where('name', 'like', "%{$busca}%"))
-                    ->orWhereHas('fatura.contrato.imovel', fn ($qi) => $qi
-                        ->where('logradouro', 'like', "%{$busca}%")
-                        ->orWhere('complemento', 'like', "%{$busca}%")
-                    );
+        if ($busca !== '') {
+            $contratosQuery->where(function ($q) use ($busca) {
+                $q->whereHas('imovel', fn ($qi) => $qi
+                    ->where('logradouro', 'like', "%{$busca}%")
+                    ->orWhere('complemento', 'like', "%{$busca}%")
+                )->orWhereHas('imovel.titularidades.vinculo.user', fn ($qu) => $qu
+                    ->where('name', 'like', "%{$busca}%")
+                );
             });
         }
 
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        $repasses = $query->orderBy('data_prevista', 'desc')
-            ->paginate(20)
-            ->withQueryString();
-
-        // Resumo (com scoping)
-        $pendentes = Repasse::where('status', 'pendente');
-        $this->scopeRepassesDoUsuario($pendentes);
-        $realizadosMes = Repasse::where('status', 'realizado')
-            ->whereYear('data_realizada', $ano)
-            ->whereMonth('data_realizada', $mes);
-        $this->scopeRepassesDoUsuario($realizadosMes);
-
-        $resumo = [
-            'pendentes_count' => (clone $pendentes)->count(),
-            'pendentes_valor' => (clone $pendentes)->sum('valor_liquido'),
-            'realizados_count' => (clone $realizadosMes)->count(),
-            'realizados_valor' => (clone $realizadosMes)->sum('valor_liquido'),
-            'total_liquido' => (clone $realizadosMes)->sum('valor_liquido'),
-        ];
+        $contratos = $contratosQuery->orderBy('id')->get();
+        $linhas = $contratos->map(fn (Contrato $c) => $this->montarLinhaRepasse($c, $mes));
 
         return Inertia::render('financeiro/repasses/index', [
-            'repasses' => $repasses,
-            'resumo' => $resumo,
+            'linhas' => $linhas->values(),
             'filtros' => [
-                'mes' => $mesAno,
-                'busca' => $request->input('busca', ''),
-                'status' => $request->input('status', ''),
+                'mes' => $mes,
+                'busca' => $busca,
             ],
         ]);
+    }
+
+    /**
+     * Monta a linha agregada do contrato no mês — soma repasses persistidos
+     * (1 por titularidade) ou calcula preview se não há fatura.
+     */
+    private function montarLinhaRepasse(Contrato $contrato, string $mes): array
+    {
+        $titular = $contrato->getTitularResponsavel();
+
+        $base = [
+            'contrato_id' => $contrato->id,
+            'imovel' => $contrato->getEnderecoCurto(),
+            'titular' => $titular?->vinculo?->user?->name ?? '—',
+            'mes_referencia' => $mes,
+        ];
+
+        $imovel = $contrato->imovel;
+
+        $fatura = $contrato->faturas->first();
+        $repasses = $fatura?->repasses ?? collect();
+
+        if ($repasses->isNotEmpty()) {
+            // Status agregado: se todos cancelados → cancelado; se algum pendente → pendente; senão realizado.
+            $status = $repasses->contains('status', 'pendente')
+                ? 'pendente'
+                : ($repasses->every(fn ($r) => $r->status === 'cancelado') ? 'cancelado' : 'realizado');
+
+            return $base + [
+                'fatura_id' => $fatura->id,
+                'valor_liquido' => (float) $repasses->sum('valor_liquido'),
+                'status' => $status,
+                'data_prevista' => $repasses->first()?->data_prevista?->toDateString(),
+                'is_preview' => false,
+                'qtd_titularidades' => $repasses->count(),
+            ];
+        }
+
+        $valorPreview = $contrato->calcularRepasseLiquidoTotal();
+
+        return $base + [
+            'fatura_id' => null,
+            'valor_liquido' => $valorPreview,
+            'status' => 'preview',
+            'data_prevista' => null,
+            'is_preview' => true,
+            'qtd_titularidades' => $imovel?->titularidades->count() ?? 0,
+        ];
     }
 
     public function show(Repasse $repasse): Response

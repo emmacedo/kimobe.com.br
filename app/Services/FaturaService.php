@@ -134,7 +134,6 @@ class FaturaService
             ->where('imovel_id', $contrato->imovel_id)
             ->get();
 
-        $aluguel = (float) $contrato->valor_aluguel;
         $taxaAdminPct = (float) $contrato->taxa_administracao_pct;
         $seguroPct = $contrato->taxa_seguro_inadimplencia_pct
             ? (float) $contrato->taxa_seguro_inadimplencia_pct
@@ -143,20 +142,16 @@ class FaturaService
         $dataPrevista = date('Y-m-d', strtotime($dataBase.' +7 days'));
 
         foreach ($titularidades as $tit) {
-            $percentual = (float) $tit->percentual / 100;
-            $bruto = round($aluguel * $percentual, 2);
-            $taxaAdmin = round($bruto * $taxaAdminPct / 100, 2);
-            $seguro = $seguroPct ? round($bruto * $seguroPct / 100, 2) : null;
-            $liquido = $bruto - $taxaAdmin - ($seguro ?? 0);
+            $componentes = $contrato->calcularRepassePorTitularidade($tit);
 
             $repasse = Repasse::create([
                 'tenant_id' => $contrato->tenant_id,
                 'fatura_id' => $fatura->id,
                 'titularidade_id' => $tit->id,
-                'valor_aluguel_bruto' => $bruto,
-                'taxa_administracao_valor' => $taxaAdmin,
-                'taxa_seguro_inadimplencia_valor' => $seguro,
-                'valor_liquido' => $liquido,
+                'valor_aluguel_bruto' => $componentes['bruto'],
+                'taxa_administracao_valor' => $componentes['taxa_admin'],
+                'taxa_seguro_inadimplencia_valor' => $componentes['seguro'],
+                'valor_liquido' => $componentes['liquido'],
                 'data_prevista' => $dataPrevista,
                 'status' => 'pendente',
                 'taxa_administracao_pct_aplicada' => $taxaAdminPct,

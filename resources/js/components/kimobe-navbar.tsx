@@ -39,7 +39,7 @@ function getNavLinks(papeis: string[]): NavLink[] {
             { title: 'Inquilinos', href: '/inquilinos', icon: Users },
             { title: 'Entidades externas', href: '/entidades-externas', icon: Building },
             { title: 'Contratos', href: '/contratos', icon: FileText },
-            { title: 'Cobranças', href: '/financeiro/faturas', icon: Receipt },
+            { title: 'Faturas', href: '/financeiro/faturas', icon: Receipt },
             { title: 'Repasses', href: '/financeiro/repasses', icon: Wallet },
             { title: 'Emails', href: '/emails', icon: Mail },
         );
@@ -52,13 +52,13 @@ function getNavLinks(papeis: string[]): NavLink[] {
             links.push(
                 { title: 'Meus Imóveis', href: '/imoveis', icon: Building2 },
                 { title: 'Meus Repasses', href: '/financeiro/repasses', icon: Wallet },
-                { title: 'Cobranças', href: '/financeiro/faturas', icon: Receipt },
+                { title: 'Faturas', href: '/financeiro/faturas', icon: Receipt },
                 { title: 'Dados Bancários', href: '/dados-bancarios', icon: Banknote },
             );
         }
         if (isInquilino) {
             links.push(
-                { title: 'Minhas Cobranças', href: '/financeiro/faturas', icon: Receipt },
+                { title: 'Minhas Faturas', href: '/financeiro/faturas', icon: Receipt },
                 { title: 'Meus Contratos', href: '/contratos', icon: FileText },
             );
         }

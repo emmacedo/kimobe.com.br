@@ -20,6 +20,16 @@ export function formataMoeda(valor: number | string | null | undefined): string 
 }
 
 /**
+ * Formata data ISO 'YYYY-MM-DD' (ou null) para 'DD/MM/YYYY'. Retorna '—' quando nula.
+ * Usa parsing manual para evitar conversão de timezone (interpretar como local).
+ */
+export function formataData(d: string | null | undefined): string {
+    if (!d) return '—';
+    const [ano, mm, dd] = d.split('-').map(Number);
+    return new Date(ano, mm - 1, dd).toLocaleDateString('pt-BR');
+}
+
+/**
  * Formata CEP para o padrão 00000-000.
  */
 export function formataCep(cep: string): string {

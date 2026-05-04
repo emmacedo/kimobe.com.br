@@ -8,6 +8,7 @@ use App\Observers\ContratoObserver;
 use Database\Factories\ContratoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -171,5 +172,78 @@ class Contrato extends Model
         }
 
         return $endereco;
+    }
+
+    /**
+     * Endereço curto para listagens — prioriza complemento (ex: "Apto 101")
+     * por ser identificador mais útil em tabelas. Cai para "logradouro, numero"
+     * quando não há complemento.
+     */
+    public function getEnderecoCurto(): string
+    {
+        $imovel = $this->imovel;
+        if (! $imovel) {
+            return '—';
+        }
+
+        return $imovel->complemento
+            ?: trim($imovel->logradouro.', '.$imovel->numero, ', ');
+    }
+
+    /**
+     * Escopo: contratos com status 'ativo'.
+     */
+    public function scopeAtivo(Builder $query): void
+    {
+        $query->where('status', 'ativo');
+    }
+
+    /**
+     * Titularidade responsável do imóvel deste contrato (papel='responsavel').
+     * Por convenção há uma única responsável por contrato (decisão MVP).
+     */
+    public function getTitularResponsavel(): ?Titularidade
+    {
+        return $this->imovel?->titularidades?->firstWhere('papel', 'responsavel');
+    }
+
+    /**
+     * Calcula os componentes do repasse para uma titularidade específica:
+     * bruto, taxa de administração, seguro de inadimplência e líquido.
+     *
+     * Centralizado aqui para ser reutilizado tanto na geração persistente
+     * (FaturaService::gerarRepasses) quanto no preview on-the-fly
+     * (RepasseController::index), eliminando duplicação da fórmula.
+     *
+     * @return array{bruto: float, taxa_admin: float, seguro: ?float, liquido: float}
+     */
+    public function calcularRepassePorTitularidade(Titularidade $titularidade): array
+    {
+        $bruto = round((float) $this->valor_aluguel * (float) $titularidade->percentual / 100, 2);
+        $taxaAdmin = round($bruto * (float) $this->taxa_administracao_pct / 100, 2);
+        $seguro = $this->taxa_seguro_inadimplencia_pct
+            ? round($bruto * (float) $this->taxa_seguro_inadimplencia_pct / 100, 2)
+            : null;
+        $liquido = $bruto - $taxaAdmin - ($seguro ?? 0);
+
+        return [
+            'bruto' => $bruto,
+            'taxa_admin' => $taxaAdmin,
+            'seguro' => $seguro,
+            'liquido' => $liquido,
+        ];
+    }
+
+    /**
+     * Soma o líquido de repasse de todas as titularidades do imóvel.
+     * Usado pela visão "1 linha por contrato" no preview de repasses.
+     */
+    public function calcularRepasseLiquidoTotal(): float
+    {
+        $titularidades = $this->imovel?->titularidades ?? collect();
+
+        return (float) $titularidades->sum(
+            fn (Titularidade $tit) => $this->calcularRepassePorTitularidade($tit)['liquido']
+        );
     }
 }

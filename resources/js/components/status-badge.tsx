@@ -25,11 +25,13 @@ const statusMap: Record<StatusType, Record<string, StatusConfig>> = {
         pendente: { label: 'Pendente', className: 'bg-[#FFF4E5] text-[#8C5A10]' },
         atrasado: { label: 'Atrasado', className: 'bg-[#FDECEC] text-[#A83232]' },
         cancelado: { label: 'Cancelado', className: 'bg-[#F7F8F7] text-[#6B7370]' },
+        preview: { label: 'Prévia', className: 'bg-[#EEF0EF] text-[#6B7370]' },
     },
     repasse: {
         pendente: { label: 'Pendente', className: 'bg-[#FFF4E5] text-[#8C5A10]' },
         realizado: { label: 'Realizado', className: 'bg-[#E7F7ED] text-[#1B6B3A]' },
         cancelado: { label: 'Cancelado', className: 'bg-[#FDECEC] text-[#A83232]' },
+        preview: { label: 'Prévia', className: 'bg-[#EEF0EF] text-[#6B7370]' },
     },
     garantia: {
         ativo: { label: 'Ativa', className: 'bg-[#E7F7ED] text-[#1B6B3A]' },
