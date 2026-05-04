@@ -34,6 +34,7 @@ class RepasseController extends Controller
             'imovel.titularidades.vinculo.user',
             'faturas' => fn ($q) => $q->where('referencia', $referencia)
                 ->with(['repasses.titularidade.vinculo.user']),
+            'itensCobranca' => fn ($q) => $q->where('mes_referencia', $referencia),
         ]);
         $this->scopeContratosDoUsuario($contratosQuery);
 
@@ -49,7 +50,7 @@ class RepasseController extends Controller
         }
 
         $contratos = $contratosQuery->orderBy('id')->get();
-        $linhas = $contratos->map(fn (Contrato $c) => $this->montarLinhaRepasse($c, $mes));
+        $linhas = $contratos->map(fn (Contrato $c) => $this->montarLinhaRepasse($c, $mes, $referencia));
 
         return Inertia::render('financeiro/repasses/index', [
             'linhas' => $linhas->values(),
@@ -64,7 +65,7 @@ class RepasseController extends Controller
      * Monta a linha agregada do contrato no mês — soma repasses persistidos
      * (1 por titularidade) ou calcula preview se não há fatura.
      */
-    private function montarLinhaRepasse(Contrato $contrato, string $mes): array
+    private function montarLinhaRepasse(Contrato $contrato, string $mes, string $referencia): array
     {
         $titular = $contrato->getTitularResponsavel();
 
@@ -96,7 +97,7 @@ class RepasseController extends Controller
             ];
         }
 
-        $valorPreview = $contrato->calcularRepasseLiquidoTotal();
+        $valorPreview = $contrato->calcularRepasseLiquidoTotal($referencia);
 
         return $base + [
             'fatura_id' => null,

@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\Titularidade;
 use App\Models\User;
 use App\Models\Vinculo;
+use App\Services\ItemCobrancaService;
 use App\Services\TenantService;
 
 function criarContratoComTitular(Tenant $tenant, string $nomeTitular = 'Titular Teste', float $percentual = 100, bool $comSeguro = false): Contrato
@@ -43,7 +44,7 @@ function criarContratoComTitular(Tenant $tenant, string $nomeTitular = 'Titular 
         'status' => 'ativo',
     ]);
 
-    return Contrato::create([
+    $contrato = Contrato::create([
         'imovel_id' => $imovel->id,
         'inquilino_vinculo_id' => $vincInquilino->id,
         'data_inicio' => '2026-01-01',
@@ -61,6 +62,36 @@ function criarContratoComTitular(Tenant $tenant, string $nomeTitular = 'Titular 
         'tipo_garantia' => 'sem_garantia',
         'status' => 'ativo',
     ]);
+
+    // Geração automática que ContratoController::store faria — replicada aqui
+    // para os testes que criam contratos diretamente via Contrato::create.
+    $itemService = app(ItemCobrancaService::class);
+    $itemService->criar($contrato, [
+        'descricao' => 'Aluguel',
+        'natureza' => 'aluguel',
+        'pagante' => 'inquilino',
+        'recebedor' => 'proprietario',
+        'tipo' => 'recorrente',
+        'periodicidade' => 'mensal',
+        'valor_unitario' => $contrato->valor_aluguel,
+        'dia_vencimento' => $contrato->dia_vencimento,
+        'mes_referencia' => $contrato->data_inicio->format('m/Y'),
+        'visivel_inquilino' => true,
+    ]);
+    $itemService->criar($contrato, [
+        'descricao' => 'Taxa administrativa',
+        'natureza' => 'taxa_admin',
+        'pagante' => 'proprietario',
+        'recebedor' => 'administradora',
+        'tipo' => 'recorrente',
+        'periodicidade' => 'mensal',
+        'valor_unitario' => $contrato->valorTaxaAdministrativa(),
+        'dia_vencimento' => $contrato->dia_vencimento,
+        'mes_referencia' => $contrato->data_inicio->format('m/Y'),
+        'visivel_inquilino' => false,
+    ]);
+
+    return $contrato;
 }
 
 it('calcula preview de repasse pela fórmula bruto - taxa_admin - seguro', function () {

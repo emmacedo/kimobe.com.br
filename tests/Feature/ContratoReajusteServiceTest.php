@@ -30,6 +30,7 @@ it('propaga novo valor apenas para itens de aluguel pendentes a partir da data',
 
     app(ItemCobrancaService::class)->criar($contrato, [
         'descricao' => 'Aluguel',
+        'natureza' => 'aluguel',
         'pagante' => 'inquilino',
         'recebedor' => 'proprietario',
         'tipo' => 'recorrente',

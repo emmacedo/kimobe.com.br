@@ -217,13 +217,31 @@ class Contrato extends Model
      *
      * @return array{bruto: float, taxa_admin: float, seguro: ?float, liquido: float}
      */
-    public function calcularRepassePorTitularidade(Titularidade $titularidade): array
+    public function calcularRepassePorTitularidade(Titularidade $titularidade, string $mesReferencia): array
     {
-        $bruto = round((float) $this->valor_aluguel * (float) $titularidade->percentual / 100, 2);
-        $taxaAdmin = round($bruto * (float) $this->taxa_administracao_pct / 100, 2);
+        $percentual = (float) $titularidade->percentual / 100;
+
+        // Usa relação eager-loaded quando disponível (evita N+1 em listagens);
+        // senão, consulta o DB por contrato/mês.
+        if ($this->relationLoaded('itensCobranca')) {
+            $itensDoMes = $this->itensCobranca->where('mes_referencia', $mesReferencia);
+            $brutoTotal = (float) $itensDoMes->where('recebedor', 'proprietario')->sum('valor_unitario');
+            $taxaAdminTotal = (float) $itensDoMes->where('pagante', 'proprietario')->sum('valor_unitario');
+        } else {
+            $base = ItemCobranca::query()
+                ->where('contrato_id', $this->id)
+                ->where('mes_referencia', $mesReferencia);
+            $brutoTotal = (float) (clone $base)->where('recebedor', 'proprietario')->sum('valor_unitario');
+            $taxaAdminTotal = (float) (clone $base)->where('pagante', 'proprietario')->sum('valor_unitario');
+        }
+
+        $bruto = round($brutoTotal * $percentual, 2);
+        $taxaAdmin = round($taxaAdminTotal * $percentual, 2);
+
         $seguro = $this->taxa_seguro_inadimplencia_pct
             ? round($bruto * (float) $this->taxa_seguro_inadimplencia_pct / 100, 2)
             : null;
+
         $liquido = $bruto - $taxaAdmin - ($seguro ?? 0);
 
         return [
@@ -235,15 +253,26 @@ class Contrato extends Model
     }
 
     /**
-     * Soma o líquido de repasse de todas as titularidades do imóvel.
-     * Usado pela visão "1 linha por contrato" no preview de repasses.
+     * Valor monetário da taxa de administração — snapshot do percentual sobre
+     * o valor de aluguel vigente. Usado para gerar o item de cobrança
+     * recorrente de natureza='taxa_admin'.
      */
-    public function calcularRepasseLiquidoTotal(): float
+    public function valorTaxaAdministrativa(): float
+    {
+        return round((float) $this->valor_aluguel * (float) $this->taxa_administracao_pct / 100, 2);
+    }
+
+    /**
+     * Soma o líquido de repasse de todas as titularidades do imóvel para um
+     * mês de referência. Usado pela visão "1 linha por contrato" no preview
+     * de repasses.
+     */
+    public function calcularRepasseLiquidoTotal(string $mesReferencia): float
     {
         $titularidades = $this->imovel?->titularidades ?? collect();
 
         return (float) $titularidades->sum(
-            fn (Titularidade $tit) => $this->calcularRepassePorTitularidade($tit)['liquido']
+            fn (Titularidade $tit) => $this->calcularRepassePorTitularidade($tit, $mesReferencia)['liquido']
         );
     }
 }

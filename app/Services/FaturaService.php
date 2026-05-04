@@ -142,7 +142,7 @@ class FaturaService
         $dataPrevista = date('Y-m-d', strtotime($dataBase.' +7 days'));
 
         foreach ($titularidades as $tit) {
-            $componentes = $contrato->calcularRepassePorTitularidade($tit);
+            $componentes = $contrato->calcularRepassePorTitularidade($tit, $fatura->referencia);
 
             $repasse = Repasse::create([
                 'tenant_id' => $contrato->tenant_id,

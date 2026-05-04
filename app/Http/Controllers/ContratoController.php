@@ -200,6 +200,7 @@ class ContratoController extends Controller
                 // Gera automaticamente o item de cobrança recorrente "Aluguel" — pré-gera
                 // todas as ocorrências mensais até data_fim.
                 $this->gerarItemAluguelInicial($contrato);
+                $this->gerarItemTaxaAdminInicial($contrato);
 
                 return $contrato;
             });
@@ -421,6 +422,7 @@ class ContratoController extends Controller
     {
         app(ItemCobrancaService::class)->criar($contrato, [
             'descricao' => 'Aluguel',
+            'natureza' => 'aluguel',
             'pagante' => 'inquilino',
             'recebedor' => 'proprietario',
             'tipo' => 'recorrente',
@@ -429,6 +431,33 @@ class ContratoController extends Controller
             'dia_vencimento' => $contrato->dia_vencimento,
             'mes_referencia' => $contrato->data_inicio->format('m/Y'),
             'visivel_inquilino' => true,
+        ]);
+    }
+
+    /**
+     * Item de cobrança recorrente da taxa administrativa cobrada do
+     * proprietário pela imobiliária. Espelha o padrão do aluguel mas
+     * com pagante=proprietario e recebedor=administradora. Não é
+     * reajustada automaticamente (filtro do reajuste é por natureza).
+     */
+    private function gerarItemTaxaAdminInicial(Contrato $contrato): void
+    {
+        $valor = $contrato->valorTaxaAdministrativa();
+        if ($valor <= 0) {
+            return;
+        }
+
+        app(ItemCobrancaService::class)->criar($contrato, [
+            'descricao' => 'Taxa administrativa',
+            'natureza' => 'taxa_admin',
+            'pagante' => 'proprietario',
+            'recebedor' => 'administradora',
+            'tipo' => 'recorrente',
+            'periodicidade' => 'mensal',
+            'valor_unitario' => $valor,
+            'dia_vencimento' => $contrato->dia_vencimento,
+            'mes_referencia' => $contrato->data_inicio->format('m/Y'),
+            'visivel_inquilino' => false,
         ]);
     }
 }

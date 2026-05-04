@@ -136,6 +136,7 @@ class ItemCobrancaService
             'contrato_id' => $contrato->id,
             'parent_item_id' => $parentId,
             'descricao' => $dados['descricao'],
+            'natureza' => $dados['natureza'] ?? 'outros',
             'pagante' => $dados['pagante'],
             'recebedor' => $dados['recebedor'],
             'entidade_externa_id' => $dados['entidade_externa_id'] ?? null,

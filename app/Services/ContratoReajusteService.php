@@ -88,7 +88,7 @@ class ContratoReajusteService
 
         $idsAfetados = ItemCobranca::query()
             ->where('contrato_id', $contrato->id)
-            ->where('descricao', 'Aluguel')
+            ->where('natureza', 'aluguel')
             ->where('status', 'pendente')
             ->pluck('mes_referencia', 'id')
             ->filter(function (string $mesRef) use ($corteAnoMes) {

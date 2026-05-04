@@ -129,6 +129,8 @@ export type ParteFinanceira = 'inquilino' | 'proprietario' | 'administradora';
 
 export type TipoItemCobranca = 'recorrente' | 'parcelado' | 'avulso';
 
+export type NaturezaItemCobranca = 'aluguel' | 'taxa_admin' | 'outros';
+
 export type PeriodicidadeItemCobranca = 'mensal' | 'bimestral' | 'trimestral' | 'semestral' | 'anual';
 
 export type StatusItemCobranca = 'pendente' | 'conciliado' | 'cancelado';
@@ -138,6 +140,7 @@ export interface ItemCobranca {
     parent_item_id: number | null;
     contrato_id: number;
     descricao: string;
+    natureza: NaturezaItemCobranca;
     pagante: ParteFinanceira;
     recebedor: ParteFinanceira;
     entidade_externa_id: number | null;

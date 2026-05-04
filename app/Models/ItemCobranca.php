@@ -17,6 +17,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'parent_item_id',
     'contrato_id',
     'descricao',
+    'natureza',
     'pagante',
     'recebedor',
     'entidade_externa_id',
@@ -45,7 +46,7 @@ class ItemCobranca extends Model
     {
         return LogOptions::defaults()
             ->logOnly([
-                'descricao', 'pagante', 'recebedor', 'entidade_externa_id',
+                'descricao', 'natureza', 'pagante', 'recebedor', 'entidade_externa_id',
                 'valor_unitario', 'dia_vencimento', 'visivel_inquilino', 'status',
                 'data_pagamento_externo', 'observacoes',
             ])
@@ -61,6 +62,7 @@ class ItemCobranca extends Model
     protected function casts(): array
     {
         return [
+            'natureza' => 'string',
             'pagante' => 'string',
             'recebedor' => 'string',
             'tipo' => 'string',
